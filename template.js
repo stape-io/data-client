@@ -17,6 +17,7 @@ const getRequestQueryString = require('getRequestQueryString');
 const makeInteger = require('makeInteger');
 const getRemoteAddress = require('getRemoteAddress');
 const setCookie = require('setCookie');
+const setPixelResponse = require('setPixelResponse');
 
 const path = getRequestPath();
 let isClientUsed = false;
@@ -60,6 +61,7 @@ function runClient()
     eventModel = addDataTagParametersToEventModel(eventModel);
     eventModel = addRequiredParametersToEventModel(eventModel);
     eventModel = addCommonParametersToEventModel(eventModel);
+    eventModel = cleanupEventModel(eventModel);
 
     runContainer(eventModel, () => {
         setCookie('_dtclid', eventModel.client_id, {
@@ -71,17 +73,24 @@ function runClient()
         });
 
         setResponseHeader('Access-Control-Allow-Origin', getRequestHeader('origin'));
-        setResponseHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE');
+        setResponseHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
         setResponseHeader('Access-Control-Allow-Headers', 'content-type,set-cookie,x-robots-tag,x-gtm-server-preview');
         setResponseHeader('Access-Control-Allow-Credentials', 'true');
-
         setResponseStatus(200);
-        setResponseHeader('Content-Type', 'application/json');
-        setResponseBody(JSON.stringify({
-            client_id: eventModel.client_id,
-            event_id: eventModel.event_id,
-        }));
-        returnResponse();
+
+        if (eventModel.request_data.method === 'POST') {
+            setResponseHeader('Content-Type', 'application/json');
+            setResponseBody(JSON.stringify({
+                client_id: eventModel.client_id,
+                event_id: eventModel.event_id,
+            }));
+            returnResponse();
+        } else if (eventModel.request_data.method === 'OPTIONS') {
+            returnResponse();
+        } else {
+            setPixelResponse();
+            returnResponse();
+        }
     });
 }
 
@@ -238,9 +247,7 @@ function addBodyParametersToEventModel(eventModel)
 {
     if (eventModel.request_data.body) {
         for (let bodyKey in eventModel.request_data.body) {
-            if (bodyKey !== 'data_tag' && bodyKey !== 'data_tag_custom_data' && bodyKey !== 'dtclid') {
-                eventModel[bodyKey] = eventModel.request_data.body[bodyKey];
-            }
+            eventModel[bodyKey] = eventModel.request_data.body[bodyKey];
         }
     }
 
@@ -298,6 +305,24 @@ function addRequiredParametersToEventModel(eventModel)
     }
 
     return eventModel;
+}
+
+function cleanupEventModel(eventModel)
+{
+    let cleanEventModel = {};
+
+    for (let key in eventModel) {
+        if (
+            key !== 'data_tag'
+            && key !== 'data_tag_custom_data'
+            && key !== 'dtclid'
+            && key !== 'v'
+        ) {
+            cleanEventModel[key] = eventModel[key];
+        }
+    }
+
+    return cleanEventModel;
 }
 
 function getBody()
