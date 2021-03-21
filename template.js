@@ -168,12 +168,14 @@ function addCommonParametersToEventModel(eventModel)
 
     if (!userData.email_address) {
         if (eventModel.userEmail) userData.email_address = eventModel.userEmail;
+        else if (eventModel.email_address) userData.email_address = eventModel.email_address;
         else if (eventModel.email) userData.email_address = eventModel.email;
         else if (eventModel.mail) userData.email_address = eventModel.mail;
     }
 
     if (!userData.phone_number) {
         if (eventModel.userPhoneNumber) userData.phone_number = eventModel.userPhoneNumber;
+        else if (eventModel.phone_number) userData.phone_number = eventModel.phone_number;
         else if (eventModel.phoneNumber) userData.phone_number = eventModel.phoneNumber;
         else if (eventModel.phone) userData.phone_number = eventModel.phone;
     }
@@ -187,7 +189,7 @@ function addCommonParametersToEventModel(eventModel)
 
     if (!userAddressData.last_name) {
         if (eventModel.userLastName) userAddressData.last_name = eventModel.userLastName;
-        else if (eventModel.first_name) userAddressData.last_name = eventModel.last_name;
+        else if (eventModel.last_name) userAddressData.last_name = eventModel.last_name;
         else if (eventModel.lastName) userAddressData.last_name = eventModel.lastName;
         else if (eventModel.surname) userAddressData.last_name = eventModel.surname;
         else if (eventModel.family_name) userAddressData.last_name = eventModel.family_name;
