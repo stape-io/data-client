@@ -14,6 +14,7 @@ ___INFO___
   "version": 1,
   "securityGroups": [],
   "displayName": "Data client",
+  "categories": ["UTILITY", "DATA_WAREHOUSING"],
   "brand": {
     "id": "brand_dummy",
     "displayName": "GTM Server",
