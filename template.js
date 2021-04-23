@@ -260,18 +260,7 @@ function addDataTagParametersToEventModel(eventModel)
 {
     if (eventModel.request_data.body && eventModel.request_data.body.data_tag === true && eventModel.request_data.body.data_tag_custom_data) {
         for (let dataKey in eventModel.request_data.body.data_tag_custom_data) {
-            let dataValue = eventModel.request_data.body.data_tag_custom_data[dataKey].value;
-            let dataTransformation = eventModel.request_data.body.data_tag_custom_data[dataKey].transformation;
-
-            if (dataTransformation === 'trim') {
-                dataValue = dataValue.trim();
-            }
-
-            if (dataTransformation === 'to_lower_case') {
-                dataValue = dataValue.trim().toLocaleLowerCase();
-            }
-
-            eventModel[eventModel.request_data.body.data_tag_custom_data[dataKey].name] = dataValue;
+            eventModel[eventModel.request_data.body.data_tag_custom_data[dataKey].name] = eventModel.request_data.body.data_tag_custom_data[dataKey].value;
         }
     }
 
@@ -314,12 +303,7 @@ function cleanupEventModel(eventModel)
     let cleanEventModel = {};
 
     for (let key in eventModel) {
-        if (
-            key !== 'data_tag'
-            && key !== 'data_tag_custom_data'
-            && key !== 'dtclid'
-            && key !== 'v'
-        ) {
+        if (key !== 'data_tag' && key !== 'data_tag_custom_data' && key !== 'dtclid' && key !== 'v') {
             cleanEventModel[key] = eventModel[key];
         }
     }
