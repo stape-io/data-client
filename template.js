@@ -63,35 +63,28 @@ function runClient()
     eventModel = addCommonParametersToEventModel(eventModel);
     eventModel = cleanupEventModel(eventModel);
 
-    runContainer(eventModel, () => {
-        setCookie('_dtclid', eventModel.client_id, {
-            domain: 'auto',
-            path: '/',
-            'max-age': 63072000, // 2 years
-            samesite: 'Lax',
-            secure: true
+
+    if (eventModel.request_data.method === 'OPTIONS') {
+        setResponseHeaders(eventModel);
+
+        returnResponse();
+    } else {
+        runContainer(eventModel, () => {
+            setResponseHeaders(eventModel);
+
+            if (eventModel.request_data.method === 'POST') {
+                setResponseHeader('Content-Type', 'application/json');
+                setResponseBody(JSON.stringify({
+                    client_id: eventModel.client_id,
+                    event_id: eventModel.event_id,
+                }));
+                returnResponse();
+            } else {
+                setPixelResponse();
+                returnResponse();
+            }
         });
-
-        setResponseHeader('Access-Control-Allow-Origin', getRequestHeader('origin'));
-        setResponseHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-        setResponseHeader('Access-Control-Allow-Headers', 'content-type,set-cookie,x-robots-tag,x-gtm-server-preview');
-        setResponseHeader('Access-Control-Allow-Credentials', 'true');
-        setResponseStatus(200);
-
-        if (eventModel.request_data.method === 'POST') {
-            setResponseHeader('Content-Type', 'application/json');
-            setResponseBody(JSON.stringify({
-                client_id: eventModel.client_id,
-                event_id: eventModel.event_id,
-            }));
-            returnResponse();
-        } else if (eventModel.request_data.method === 'OPTIONS') {
-            returnResponse();
-        } else {
-            setPixelResponse();
-            returnResponse();
-        }
-    });
+    }
 }
 
 function addCommonParametersToEventModel(eventModel)
@@ -419,4 +412,20 @@ function getObjectLength(object) {
         }
     }
     return length;
+}
+
+function setResponseHeaders(eventModel) {
+    setCookie('_dtclid', eventModel.client_id, {
+        domain: 'auto',
+        path: '/',
+        'max-age': 63072000, // 2 years
+        samesite: 'Lax',
+        secure: true
+    });
+
+    setResponseHeader('Access-Control-Allow-Origin', getRequestHeader('origin'));
+    setResponseHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    setResponseHeader('Access-Control-Allow-Headers', 'content-type,set-cookie,x-robots-tag,x-gtm-server-preview');
+    setResponseHeader('Access-Control-Allow-Credentials', 'true');
+    setResponseStatus(200);
 }
