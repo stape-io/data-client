@@ -1,5 +1,7 @@
 homepage: "https://gtm-server.com/"
 versions:
+  - sha: 5ae9e0c010cf4e4c0c4d1dcc70fac5c28dbe1a66
+    changeNotes: Do not run container on option request.
   - sha: 7c3b0f7ff92880ce3a83dbf5f4eca315e468e2a4
     changeNotes: Move transformation logic to the web.
   - sha: e927adb13b807eb375c07553da418f592be51e1e
