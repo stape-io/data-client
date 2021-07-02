@@ -425,7 +425,7 @@ function setResponseHeaders(eventModel) {
 
     setResponseHeader('Access-Control-Allow-Origin', getRequestHeader('origin'));
     setResponseHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-    setResponseHeader('Access-Control-Allow-Headers', 'content-type,set-cookie,x-robots-tag,x-gtm-server-preview');
+    setResponseHeader('Access-Control-Allow-Headers', 'content-type,set-cookie,x-robots-tag,x-gtm-server-preview,x-stape-preview');
     setResponseHeader('Access-Control-Allow-Credentials', 'true');
     setResponseStatus(200);
 }

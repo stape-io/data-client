@@ -1,4 +1,4 @@
-homepage: "https://gtm-server.com/"
+homepage: "https://stape.io/"
 versions:
   - sha: 5ae9e0c010cf4e4c0c4d1dcc70fac5c28dbe1a66
     changeNotes: Do not run container on option request.
