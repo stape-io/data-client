@@ -1,5 +1,7 @@
 homepage: "https://stape.io/"
 versions:
+  - sha: 3bc72ee6f317905f2356e452014ac88f42336c03
+    changeNotes: Move from gtm-server to stape.
   - sha: 5ae9e0c010cf4e4c0c4d1dcc70fac5c28dbe1a66
     changeNotes: Do not run container on option request.
   - sha: 7c3b0f7ff92880ce3a83dbf5f4eca315e468e2a4
