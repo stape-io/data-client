@@ -417,6 +417,15 @@ function getKnownCookies() {
         }
     }
 
+    if (existCookies.FPID) {
+        setCookie('FPIDP', existCookies.FPID, {
+            domain: 'auto',
+            path: '/',
+            'max-age': 63072000, // 2 years
+            httpOnly: false
+        });
+    }
+
     return existCookies;
 }
 
@@ -661,6 +670,53 @@ ___SERVER_PERMISSIONS___
                     "string": "any"
                   }
                 ]
+              },
+              {
+                "type": 3,
+                "mapKey": [
+                  {
+                    "type": 1,
+                    "string": "name"
+                  },
+                  {
+                    "type": 1,
+                    "string": "domain"
+                  },
+                  {
+                    "type": 1,
+                    "string": "path"
+                  },
+                  {
+                    "type": 1,
+                    "string": "secure"
+                  },
+                  {
+                    "type": 1,
+                    "string": "session"
+                  }
+                ],
+                "mapValue": [
+                  {
+                    "type": 1,
+                    "string": "FPIDP"
+                  },
+                  {
+                    "type": 1,
+                    "string": "*"
+                  },
+                  {
+                    "type": 1,
+                    "string": "*"
+                  },
+                  {
+                    "type": 1,
+                    "string": "any"
+                  },
+                  {
+                    "type": 1,
+                    "string": "any"
+                  }
+                ]
               }
             ]
           }
@@ -683,3 +739,5 @@ scenarios: []
 ___NOTES___
 
 Created on 21/03/2021, 11:24:30
+
+

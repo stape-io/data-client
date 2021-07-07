@@ -352,6 +352,15 @@ function getKnownCookies() {
         }
     }
 
+    if (existCookies.FPID) {
+        setCookie('FPIDP', existCookies.FPID, {
+            domain: 'auto',
+            path: '/',
+            'max-age': 63072000, // 2 years
+            httpOnly: false
+        });
+    }
+
     return existCookies;
 }
 
