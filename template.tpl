@@ -69,16 +69,14 @@ const setResponseHeader = require('setResponseHeader');
 const setResponseStatus = require('setResponseStatus');
 const setResponseBody = require('setResponseBody');
 const JSON = require('JSON');
-const generateRandom = require('generateRandom');
+const fromBase64 = require('fromBase64');
 const getTimestampMillis = require('getTimestampMillis');
-const computeEffectiveTldPlusOne = require('computeEffectiveTldPlusOne');
 const getCookieValues = require('getCookieValues');
 const getRequestBody = require('getRequestBody');
 const getRequestMethod = require('getRequestMethod');
 const getRequestHeader = require('getRequestHeader');
 const getRequestPath = require('getRequestPath');
 const getRequestQueryParameters = require('getRequestQueryParameters');
-const getRequestQueryString = require('getRequestQueryString');
 const makeInteger = require('makeInteger');
 const getRemoteAddress = require('getRemoteAddress');
 const setCookie = require('setCookie');
@@ -88,6 +86,10 @@ const path = getRequestPath();
 let isClientUsed = false;
 
 if (path === '/data') {
+    runClient();
+}
+
+if (path === '/data/store') {
     runClient();
 }
 
@@ -104,44 +106,34 @@ function runClient()
     isClientUsed = true;
     require('claimRequest')();
 
-    let eventModel = {
-        timestamp: makeInteger(getTimestampMillis()/1000),
-        request_data: {
-            body: getBody(),
-            path: getRequestPath(),
-            method: getRequestMethod(),
-            domain: getDomain(),
-            domain_effective_tld_plus_one: getDomainEffectiveTldPlusOne(),
-            query_string: getRequestQueryString(),
-            query_parameters: getRequestQueryParameters(),
-            cookies: getKnownCookies(),
-            headers: getKnownHeaders(),
-        },
-    };
+    if (getRequestMethod() === 'OPTIONS') {
+        setResponseHeaders();
 
-    eventModel.client_id = getDtclid(eventModel);
-
-    eventModel = addQueryParametersToEventModel(eventModel);
-    eventModel = addBodyParametersToEventModel(eventModel);
-    eventModel = addDataTagParametersToEventModel(eventModel);
-    eventModel = addRequiredParametersToEventModel(eventModel);
-    eventModel = addCommonParametersToEventModel(eventModel);
-    eventModel = cleanupEventModel(eventModel);
-
-
-    if (eventModel.request_data.method === 'OPTIONS') {
-        setResponseHeaders(eventModel);
+        returnResponse();
+    } else if (path === '/data/store') {
+        storeCookies();
+        exposeFPIDCookie();
+        setResponseHeaders();
+        setPixelResponse();
 
         returnResponse();
     } else {
-        runContainer(eventModel, () => {
-            setResponseHeaders(eventModel);
+        let eventModel = {timestamp: makeInteger(getTimestampMillis()/1000)};
 
-            if (eventModel.request_data.method === 'POST') {
+        eventModel = addQueryParametersToEventModel(eventModel);
+        eventModel = addBodyParametersToEventModel(eventModel);
+        eventModel = addRequiredParametersToEventModel(eventModel);
+        eventModel = addDataTagParametersToEventModel(eventModel);
+        eventModel = addCommonParametersToEventModel(eventModel);
+        exposeFPIDCookie();
+
+        runContainer(eventModel, () => {
+            setResponseHeaders();
+
+            if (getRequestMethod() === 'POST') {
                 setResponseHeader('Content-Type', 'application/json');
                 setResponseBody(JSON.stringify({
-                    client_id: eventModel.client_id,
-                    event_id: eventModel.event_id,
+                    timestamp: eventModel.timestamp,
                 }));
                 returnResponse();
             } else {
@@ -157,13 +149,8 @@ function addCommonParametersToEventModel(eventModel)
     let userData = {};
     let userAddressData = {};
 
-    if (eventModel.user_data) {
-        userData = eventModel.user_data;
-    }
-
-    if (userData.address) {
-        userAddressData = userData.address;
-    }
+    if (eventModel.user_data) userData = eventModel.user_data;
+    if (userData.address) userAddressData = userData.address;
 
     if (!eventModel.ip_override) {
         if (eventModel.ip) eventModel.ip_override = eventModel.ip;
@@ -184,10 +171,6 @@ function addCommonParametersToEventModel(eventModel)
         }
     }
 
-    if (!eventModel.page_encoding) {
-        if (eventModel.pageEncoding) eventModel.page_encoding = eventModel.pageEncoding;
-    }
-
     if (!eventModel.page_hostname) {
         if (eventModel.pageHostname) eventModel.page_hostname = eventModel.pageHostname;
         else if (eventModel.hostname) eventModel.page_hostname = eventModel.hostname;
@@ -199,29 +182,9 @@ function addCommonParametersToEventModel(eventModel)
         else if (eventModel.href) eventModel.page_location = eventModel.href;
     }
 
-    if (!eventModel.page_path) {
-        if (eventModel.pagePath) eventModel.page_path = eventModel.pagePath;
-    }
-
     if (!eventModel.page_referrer) {
         if (eventModel.pageReferrer) eventModel.page_referrer = eventModel.pageReferrer;
         else if (eventModel.referrer) eventModel.page_referrer = eventModel.referrer;
-    }
-
-    if (!eventModel.page_title) {
-        if (eventModel.pageTitle) eventModel.page_title = eventModel.pageTitle;
-    }
-
-    if (!eventModel.screen_resolution) {
-        if (eventModel.screenResolution) eventModel.screen_resolution = eventModel.screenResolution;
-    }
-
-    if (!eventModel.viewport_size) {
-        if (eventModel.viewportSize) eventModel.viewport_size = eventModel.viewportSize;
-    }
-
-    if (!eventModel.user_id) {
-        if (eventModel.userId) eventModel.user_id = eventModel.userId;
     }
 
     if (!userData.email_address) {
@@ -237,6 +200,17 @@ function addCommonParametersToEventModel(eventModel)
         else if (eventModel.phoneNumber) userData.phone_number = eventModel.phoneNumber;
         else if (eventModel.phone) userData.phone_number = eventModel.phone;
     }
+
+    if (!eventModel.page_encoding && eventModel.pageEncoding) eventModel.page_encoding = eventModel.pageEncoding;
+    if (!eventModel.page_path && eventModel.pagePath) eventModel.page_path = eventModel.pagePath;
+    if (!eventModel.page_title && eventModel.pageTitle) eventModel.page_title = eventModel.pageTitle;
+    if (!eventModel.screen_resolution && eventModel.screenResolution) eventModel.screen_resolution = eventModel.screenResolution;
+    if (!eventModel.viewport_size && eventModel.viewportSize) eventModel.viewport_size = eventModel.viewportSize;
+    if (!eventModel.user_id && eventModel.userId) eventModel.user_id = eventModel.userId;
+    if (!userAddressData.street && eventModel.street) userAddressData.street = eventModel.street;
+    if (!userAddressData.city && eventModel.city) userAddressData.city = eventModel.city;
+    if (!userAddressData.region && eventModel.region) userAddressData.region = eventModel.region;
+    if (!userAddressData.country && eventModel.country) userAddressData.country = eventModel.country;
 
     if (!userAddressData.first_name) {
         if (eventModel.userFirstName) userAddressData.first_name = eventModel.userFirstName;
@@ -254,25 +228,9 @@ function addCommonParametersToEventModel(eventModel)
         else if (eventModel.familyName) userAddressData.last_name = eventModel.familyName;
     }
 
-    if (!userAddressData.street) {
-        if (eventModel.street) userAddressData.street = eventModel.street;
-    }
-
-    if (!userAddressData.city) {
-        if (eventModel.city) userAddressData.city = eventModel.city;
-    }
-
-    if (!userAddressData.region) {
-        if (eventModel.region) userAddressData.region = eventModel.region;
-    }
-
     if (!userAddressData.region) {
         if (eventModel.region) userAddressData.region = eventModel.region;
         else if (eventModel.state) userAddressData.region = eventModel.state;
-    }
-
-    if (!userAddressData.country) {
-        if (eventModel.country) userAddressData.country = eventModel.country;
     }
 
     if (!userAddressData.postal_code) {
@@ -294,9 +252,11 @@ function addCommonParametersToEventModel(eventModel)
 
 function addQueryParametersToEventModel(eventModel)
 {
-    if (eventModel.request_data.query_parameters) {
-        for (let queryParameterKey in eventModel.request_data.query_parameters) {
-            eventModel[queryParameterKey] = eventModel.request_data.query_parameters[queryParameterKey];
+    const requestQueryParameters = getRequestQueryParameters();
+
+    if (requestQueryParameters) {
+        for (let queryParameterKey in requestQueryParameters) {
+            eventModel[queryParameterKey] = requestQueryParameters[queryParameterKey];
         }
     }
 
@@ -305,24 +265,69 @@ function addQueryParametersToEventModel(eventModel)
 
 function addBodyParametersToEventModel(eventModel)
 {
-    if (eventModel.request_data.body) {
-        for (let bodyKey in eventModel.request_data.body) {
-            eventModel[bodyKey] = eventModel.request_data.body[bodyKey];
+    const body = getRequestBody();
+
+    if (body) {
+        const bodyJson = JSON.parse(body);
+
+        if (bodyJson) {
+            for (let bodyKey in bodyJson) {
+                if (bodyKey === 'important_cookie_values') {
+                    eventModel = addImportantCookiesToEventModel(eventModel, bodyJson[bodyKey]);
+                } else if (bodyKey === 'data_tag_custom_data') {
+                    eventModel = addDataTagParametersToEventModel(eventModel, bodyJson[bodyKey]);
+                } else {
+                    eventModel[bodyKey] = bodyJson[bodyKey];
+                }
+            }
         }
     }
 
     return eventModel;
 }
 
-function addDataTagParametersToEventModel(eventModel)
+function addDataTagParametersToEventModel(eventModel, customData)
 {
-    if (eventModel.request_data.body && eventModel.request_data.body.data_tag === true && eventModel.request_data.body.data_tag_custom_data) {
-        for (let dataKey in eventModel.request_data.body.data_tag_custom_data) {
-            eventModel[eventModel.request_data.body.data_tag_custom_data[dataKey].name] = eventModel.request_data.body.data_tag_custom_data[dataKey].value;
+    for (let dataKey in customData) {
+        eventModel[customData[dataKey].name] = customData[dataKey].value;
+    }
+
+    return eventModel;
+}
+
+function addImportantCookiesToEventModel(eventModel, customData)
+{
+    for (let dataKey in customData) {
+        if (dataKey === '_fbp' || dataKey === '_fbc') {
+            let value = customData[dataKey];
+
+            if (value.length) {
+                eventModel[dataKey] = value[0];
+            }
         }
     }
 
     return eventModel;
+}
+
+function storeCookies()
+{
+    let dataToStore = JSON.parse(fromBase64(getRequestQueryParameters().d));
+
+    for (let cookieName in dataToStore) {
+        let cookieValue = dataToStore[cookieName];
+
+        if (cookieValue.length) {
+            setCookie('stape_'+cookieName, cookieValue, {
+                domain: 'auto',
+                path: '/',
+                samesite: 'Lax',
+                secure: true,
+                'max-age': 63072000, // 2 years
+                httpOnly: false
+            });
+        }
+    }
 }
 
 function addRequiredParametersToEventModel(eventModel)
@@ -332,150 +337,26 @@ function addRequiredParametersToEventModel(eventModel)
 
         if (eventModel.eventName) eventName = eventModel.eventName;
         else if (eventModel.event) eventName = eventModel.event;
-        else if (eventModel.name) eventName = eventModel.name;
-        else if (eventModel.request_data.path === '/favicon.ico') eventName = 'Favicon';
 
         eventModel.event_name = eventName;
-    }
-
-    if (!eventModel.event_id) {
-        eventModel.event_id = eventModel.event_name+'_'+getTimestampMillis()+'_'+generateRandom(0, 100000000);
-    }
-
-    if (!eventModel.protocol_version) {
-        let protocolVersion = 1.0;
-
-
-        if (eventModel.protocolVersion) protocolVersion = eventModel.protocolVersion;
-        else if (eventModel.protocol) protocolVersion = eventModel.protocol;
-        else if (eventModel.v) protocolVersion = eventModel.v;
-
-        eventModel.protocol_version = protocolVersion;
     }
 
     return eventModel;
 }
 
-function cleanupEventModel(eventModel)
-{
-    let cleanEventModel = {};
+function exposeFPIDCookie() {
+    let fpid = getCookieValues('FPID');
 
-    for (let key in eventModel) {
-        if (key !== 'data_tag' && key !== 'data_tag_custom_data' && key !== 'dtclid' && key !== 'v') {
-            cleanEventModel[key] = eventModel[key];
-        }
-    }
-
-    return cleanEventModel;
-}
-
-function getBody()
-{
-    const body = getRequestBody();
-
-    if (body) {
-        const bodyJson = JSON.parse(body);
-
-        if (bodyJson) {
-
-            return bodyJson;
-        }
-
-        return body;
-    }
-
-    return null;
-}
-
-function getDomain()
-{
-    return getRequestHeader('Host');
-}
-
-function getDomainEffectiveTldPlusOne()
-{
-    const host = getRequestHeader('Host');
-    let result = null;
-
-    if (host) {
-        result = computeEffectiveTldPlusOne(host);
-    }
-
-    return result;
-}
-
-function getKnownCookies() {
-    let existCookies = {};
-    let knownCookies = ['FPID', '_fbc', '_fbp', '_ga', '__cfduid'];
-
-    for (let cookieNameKey in knownCookies) {
-        let cookieName = knownCookies[cookieNameKey];
-        let cookie = getCookieValues(cookieName);
-
-        if (cookie.length) {
-            existCookies[cookieName] = cookie[0];
-        }
-    }
-
-    if (existCookies.FPID) {
-        setCookie('FPIDP', existCookies.FPID, {
+    if (fpid.length) {
+        setCookie('FPIDP', fpid[0], {
             domain: 'auto',
             path: '/',
+            samesite: 'Lax',
+            secure: true,
             'max-age': 63072000, // 2 years
             httpOnly: false
         });
     }
-
-    return existCookies;
-}
-
-function getKnownHeaders() {
-    let existHeaders = {};
-    let knownHeaders = [
-        'Hostname',
-        'Host',
-        'IP',
-        'RemoteAddr',
-        'User-Agent',
-        'Accept',
-        'Accept-Encoding',
-        'Accept-Language',
-        'Cache-Control',
-        'Pragma',
-        'X-Real-Ip',
-        'X-Forwarded-For',
-        'X-Forwarded-Host',
-        'Upgrade-Insecure-Requests',
-        'Sec-Ch-Ua',
-        'Sec-Ch-Ua-Mobile',
-    ];
-
-    for (let headerNameKey  in knownHeaders) {
-        let headerName = knownHeaders[headerNameKey];
-        let header = getRequestHeader(headerName);
-
-        if (header) {
-            existHeaders[headerName] = header;
-        }
-    }
-
-    return existHeaders;
-}
-
-function getDtclid(eventModel) {
-    if (eventModel.request_data.body && eventModel.request_data.body.dtclid) {
-        return eventModel.request_data.body.dtclid;
-    }
-
-    if (eventModel.request_data.query_parameters && eventModel.request_data.query_parameters.dtclid) {
-        return eventModel.request_data.query_parameters.dtclid;
-    }
-
-    if (getCookieValues('_dtclid') && getCookieValues('_dtclid')[0]) {
-        return getCookieValues('_dtclid')[0];
-    }
-
-    return 'dtclid.1.' + getTimestampMillis() + '.' + generateRandom(100000000, 999999999);
 }
 
 function getObjectLength(object) {
@@ -488,15 +369,7 @@ function getObjectLength(object) {
     return length;
 }
 
-function setResponseHeaders(eventModel) {
-    setCookie('_dtclid', eventModel.client_id, {
-        domain: 'auto',
-        path: '/',
-        'max-age': 63072000, // 2 years
-        samesite: 'Lax',
-        secure: true
-    });
-
+function setResponseHeaders() {
     setResponseHeader('Access-Control-Allow-Origin', getRequestHeader('origin'));
     setResponseHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
     setResponseHeader('Access-Control-Allow-Headers', 'content-type,set-cookie,x-robots-tag,x-gtm-server-preview,x-stape-preview');
@@ -651,54 +524,7 @@ ___SERVER_PERMISSIONS___
                 "mapValue": [
                   {
                     "type": 1,
-                    "string": "_dtclid"
-                  },
-                  {
-                    "type": 1,
                     "string": "*"
-                  },
-                  {
-                    "type": 1,
-                    "string": "*"
-                  },
-                  {
-                    "type": 1,
-                    "string": "any"
-                  },
-                  {
-                    "type": 1,
-                    "string": "any"
-                  }
-                ]
-              },
-              {
-                "type": 3,
-                "mapKey": [
-                  {
-                    "type": 1,
-                    "string": "name"
-                  },
-                  {
-                    "type": 1,
-                    "string": "domain"
-                  },
-                  {
-                    "type": 1,
-                    "string": "path"
-                  },
-                  {
-                    "type": 1,
-                    "string": "secure"
-                  },
-                  {
-                    "type": 1,
-                    "string": "session"
-                  }
-                ],
-                "mapValue": [
-                  {
-                    "type": 1,
-                    "string": "FPIDP"
                   },
                   {
                     "type": 1,
