@@ -1,5 +1,7 @@
 homepage: "https://stape.io/"
 versions:
+  - sha: 28b7b5dc4dfca58555fd15fff3fefe18b7b49762
+    changeNotes: Add data store functionality.
   - sha: 713fbe32cc954debebd9f145de8c9224ce75e110
     changeNotes: Add FPIDP cookie.
   - sha: 3bc72ee6f317905f2356e452014ac88f42336c03
