@@ -1,5 +1,7 @@
 homepage: "https://stape.io/"
 versions:
+  - sha: f0e02106d0c538455c4b959051066fbb59f7afa0
+    changeNotes: Add Data Tag dtcd parameter support.
   - sha: a88f51afe94db1f5e5a97ebe5cf251fc0cb444c9
     changeNotes: Add client_id generation functionality.
   - sha: 28b7b5dc4dfca58555fd15fff3fefe18b7b49762
