@@ -98,6 +98,7 @@ const setCookie = require('setCookie');
 const setPixelResponse = require('setPixelResponse');
 const generateRandom = require('generateRandom');
 
+const requestMethod = getRequestMethod();
 const path = getRequestPath();
 let isClientUsed = false;
 
@@ -122,7 +123,7 @@ function runClient()
     isClientUsed = true;
     require('claimRequest')();
 
-    if (getRequestMethod() === 'OPTIONS') {
+    if (requestMethod === 'OPTIONS') {
         setResponseHeaders();
 
         returnResponse();
@@ -147,7 +148,7 @@ function runClient()
         runContainer(eventModel, () => {
             setResponseHeaders();
 
-            if (getRequestMethod() === 'POST') {
+            if (requestMethod === 'POST') {
                 setResponseHeader('Content-Type', 'application/json');
                 setResponseBody(JSON.stringify({
                     timestamp: eventModel.timestamp,
@@ -273,7 +274,15 @@ function addQueryParametersToEventModel(eventModel)
 
     if (requestQueryParameters) {
         for (let queryParameterKey in requestQueryParameters) {
-            eventModel[queryParameterKey] = requestQueryParameters[queryParameterKey];
+            if (queryParameterKey === 'dtcd' && requestMethod === 'GET') {
+                let dtcd = JSON.parse(requestQueryParameters[queryParameterKey]);
+
+                for (let dtcdKey in dtcd) {
+                    eventModel[dtcdKey] = dtcd[dtcdKey];
+                }
+            } else {
+                eventModel[queryParameterKey] = requestQueryParameters[queryParameterKey];
+            }
         }
     }
 
@@ -410,7 +419,7 @@ function exposeFPIDCookie() {
 }
 
 function storeClientId(eventModel) {
-    if (data.exposeFPIDCookie) {
+    if (data.generateClientId) {
         setCookie('_dcid', eventModel.client_id, {
             domain: 'auto',
             path: '/',
