@@ -16,6 +16,7 @@ const makeInteger = require('makeInteger');
 const getRemoteAddress = require('getRemoteAddress');
 const setCookie = require('setCookie');
 const setPixelResponse = require('setPixelResponse');
+const generateRandom = require('generateRandom');
 
 const path = getRequestPath();
 let isClientUsed = false;
@@ -47,7 +48,6 @@ function runClient()
         returnResponse();
     } else if (path === '/data/store') {
         storeCookies();
-        exposeFPIDCookie();
         setResponseHeaders();
         setPixelResponse();
 
@@ -60,6 +60,8 @@ function runClient()
         eventModel = addRequiredParametersToEventModel(eventModel);
         eventModel = addDataTagParametersToEventModel(eventModel);
         eventModel = addCommonParametersToEventModel(eventModel);
+        eventModel = addClientIdToEventModel(eventModel);
+        storeClientId(eventModel);
         exposeFPIDCookie();
 
         runContainer(eventModel, () => {
@@ -198,6 +200,37 @@ function addQueryParametersToEventModel(eventModel)
     return eventModel;
 }
 
+function addClientIdToEventModel(eventModel)
+{
+    if (eventModel.client_id) {
+        return eventModel;
+    }
+
+    if (eventModel.data_client_id) {
+        eventModel.client_id = eventModel.data_client_id;
+
+        return eventModel;
+    }
+
+    if (eventModel._dcid) {
+        eventModel.client_id = eventModel._dcid;
+
+        return eventModel;
+    }
+
+    if (getCookieValues('_dcid') && getCookieValues('_dcid')[0]) {
+        eventModel.client_id = getCookieValues('_dcid')[0];
+
+        return eventModel;
+    }
+
+    if (data.generateClientId) {
+        eventModel.client_id = 'dcid.1.' + getTimestampMillis() + '.' + generateRandom(100000000, 999999999);
+    }
+
+    return eventModel;
+}
+
 function addBodyParametersToEventModel(eventModel)
 {
     const body = getRequestBody();
@@ -233,7 +266,7 @@ function addDataTagParametersToEventModel(eventModel, customData)
 function addImportantCookiesToEventModel(eventModel, customData)
 {
     for (let dataKey in customData) {
-        if (dataKey === '_fbp' || dataKey === '_fbc') {
+        if (dataKey === '_fbp' || dataKey === '_fbc' || dataKey === '_dcid') {
             let value = customData[dataKey];
 
             if (value.length) {
@@ -280,10 +313,25 @@ function addRequiredParametersToEventModel(eventModel)
 }
 
 function exposeFPIDCookie() {
-    let fpid = getCookieValues('FPID');
+    if (data.exposeFPIDCookie) {
+        let fpid = getCookieValues('FPID');
 
-    if (fpid.length) {
-        setCookie('FPIDP', fpid[0], {
+        if (fpid.length) {
+            setCookie('FPIDP', fpid[0], {
+                domain: 'auto',
+                path: '/',
+                samesite: 'Lax',
+                secure: true,
+                'max-age': 63072000, // 2 years
+                httpOnly: false
+            });
+        }
+    }
+}
+
+function storeClientId(eventModel) {
+    if (data.exposeFPIDCookie) {
+        setCookie('_dcid', eventModel.client_id, {
             domain: 'auto',
             path: '/',
             samesite: 'Lax',
