@@ -1,5 +1,7 @@
 homepage: "https://stape.io/"
 versions:
+  - sha: 7ff22a33ef4eb76b0311dd45cd40e92ab7068888
+    changeNotes: Update cookie storing.
   - sha: f0e02106d0c538455c4b959051066fbb59f7afa0
     changeNotes: Add Data Tag dtcd parameter support.
   - sha: a88f51afe94db1f5e5a97ebe5cf251fc0cb444c9
