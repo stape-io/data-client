@@ -17,6 +17,7 @@ const getRemoteAddress = require('getRemoteAddress');
 const setCookie = require('setCookie');
 const setPixelResponse = require('setPixelResponse');
 const generateRandom = require('generateRandom');
+const computeEffectiveTldPlusOne = require('computeEffectiveTldPlusOne');
 
 const requestMethod = getRequestMethod();
 const path = getRequestPath();
@@ -63,7 +64,7 @@ function runClient()
         eventModel = addCommonParametersToEventModel(eventModel);
         eventModel = addClientIdToEventModel(eventModel);
         storeClientId(eventModel);
-        exposeFPIDCookie();
+        exposeFPIDCookie(eventModel);
 
         runContainer(eventModel, () => {
             setResponseHeaders();
@@ -298,7 +299,7 @@ function storeCookies()
             setCookie('stape_'+cookieName, cookieValue, {
                 domain: 'auto',
                 path: '/',
-                samesite: 'Lax',
+                samesite: getCookieType({}),
                 secure: true,
                 'max-age': 63072000, // 2 years
                 httpOnly: false
@@ -321,7 +322,7 @@ function addRequiredParametersToEventModel(eventModel)
     return eventModel;
 }
 
-function exposeFPIDCookie() {
+function exposeFPIDCookie(eventModel) {
     if (data.exposeFPIDCookie) {
         let fpid = getCookieValues('FPID');
 
@@ -329,7 +330,7 @@ function exposeFPIDCookie() {
             setCookie('FPIDP', fpid[0], {
                 domain: 'auto',
                 path: '/',
-                samesite: 'Lax',
+                samesite: getCookieType(eventModel),
                 secure: true,
                 'max-age': 63072000, // 2 years
                 httpOnly: false
@@ -343,7 +344,7 @@ function storeClientId(eventModel) {
         setCookie('_dcid', eventModel.client_id, {
             domain: 'auto',
             path: '/',
-            samesite: 'Lax',
+            samesite: getCookieType(eventModel),
             secure: true,
             'max-age': 63072000, // 2 years
             httpOnly: false
@@ -367,4 +368,23 @@ function setResponseHeaders() {
     setResponseHeader('Access-Control-Allow-Headers', 'content-type,set-cookie,x-robots-tag,x-gtm-server-preview,x-stape-preview');
     setResponseHeader('Access-Control-Allow-Credentials', 'true');
     setResponseStatus(200);
+}
+
+function getCookieType(eventModel) {
+    if (!eventModel.page_location) {
+        return 'Lax';
+    }
+
+    const host = getRequestHeader('host');
+    const effectiveTldPlusOne = computeEffectiveTldPlusOne(eventModel.page_location);
+
+    if (!host || !effectiveTldPlusOne) {
+        return 'Lax';
+    }
+
+    if (host && host.indexOf(effectiveTldPlusOne) !== -1) {
+        return 'Lax';
+    }
+
+    return 'None';
 }
