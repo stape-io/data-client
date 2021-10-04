@@ -46,8 +46,45 @@ ___TEMPLATE_PARAMETERS___
   },
   {
     "type": "GROUP",
-    "name": "Settings",
-    "displayName": "More Settings",
+    "name": "responseSettings",
+    "displayName": "Response Settings",
+    "groupStyle": "ZIPPY_CLOSED",
+    "subParams": [
+      {
+        "type": "SELECT",
+        "name": "responseBody",
+        "displayName": "Response Body",
+        "macrosInSelect": false,
+        "selectItems": [
+          {
+            "value": "timestamp",
+            "displayValue": "JSON Object with timestamp (recommended)"
+          },
+          {
+            "value": "eventData",
+            "displayValue": "JSON Object with Event Data"
+          },
+          {
+            "value": "empty",
+            "displayValue": "Empty"
+          }
+        ],
+        "simpleValueType": true,
+        "defaultValue": "timestamp"
+      },
+      {
+        "type": "CHECKBOX",
+        "name": "responseBodyGet",
+        "checkboxText": "Send Response Body for GET request",
+        "simpleValueType": true,
+        "help": "By default, for the GET request type, the answer is image pixel.  \u003ca target\u003d\"_blank\" href\u003d\"https://developers.google.com/tag-manager/serverside/api#setpixelresponse\"\u003eMore Info\u003c/a\u003e."
+      }
+    ]
+  },
+  {
+    "type": "GROUP",
+    "name": "pathSettings",
+    "displayName": "Accepted Path Settings",
     "groupStyle": "ZIPPY_CLOSED",
     "subParams": [
       {
@@ -149,11 +186,8 @@ function runClient()
         runContainer(eventModel, () => {
             setResponseHeaders();
 
-            if (requestMethod === 'POST') {
-                setResponseHeader('Content-Type', 'application/json');
-                setResponseBody(JSON.stringify({
-                    timestamp: eventModel.timestamp,
-                }));
+            if (requestMethod === 'POST' || data.responseBodyGet) {
+                prepareResponseBody(eventModel);
                 returnResponse();
             } else {
                 setPixelResponse();
@@ -467,6 +501,24 @@ function getCookieType(eventModel) {
     }
 
     return 'None';
+}
+
+function prepareResponseBody(eventModel) {
+    if (data.responseBody === 'empty') {
+        return;
+    }
+
+    setResponseHeader('Content-Type', 'application/json');
+
+    if (data.responseBody === 'eventData') {
+        setResponseBody(JSON.stringify(eventModel));
+
+        return;
+    }
+
+    setResponseBody(JSON.stringify({
+        timestamp: eventModel.timestamp,
+    }));
 }
 
 

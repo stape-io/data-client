@@ -69,11 +69,8 @@ function runClient()
         runContainer(eventModel, () => {
             setResponseHeaders();
 
-            if (requestMethod === 'POST') {
-                setResponseHeader('Content-Type', 'application/json');
-                setResponseBody(JSON.stringify({
-                    timestamp: eventModel.timestamp,
-                }));
+            if (requestMethod === 'POST' || data.responseBodyGet) {
+                prepareResponseBody(eventModel);
                 returnResponse();
             } else {
                 setPixelResponse();
@@ -387,4 +384,22 @@ function getCookieType(eventModel) {
     }
 
     return 'None';
+}
+
+function prepareResponseBody(eventModel) {
+    if (data.responseBody === 'empty') {
+        return;
+    }
+
+    setResponseHeader('Content-Type', 'application/json');
+
+    if (data.responseBody === 'eventData') {
+        setResponseBody(JSON.stringify(eventModel));
+
+        return;
+    }
+
+    setResponseBody(JSON.stringify({
+        timestamp: eventModel.timestamp,
+    }));
 }
