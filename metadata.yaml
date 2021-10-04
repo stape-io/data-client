@@ -1,5 +1,7 @@
 homepage: "https://stape.io/"
 versions:
+  - sha: fb78186e3fa6f49bde7a32b9e4714eaf4d1cce86
+    changeNotes: Add response settings.
   - sha: 7ff22a33ef4eb76b0311dd45cd40e92ab7068888
     changeNotes: Update cookie storing.
   - sha: f0e02106d0c538455c4b959051066fbb59f7afa0
