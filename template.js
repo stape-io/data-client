@@ -27,10 +27,6 @@ if (path === '/data') {
     runClient();
 }
 
-if (path === '/data/store') {
-    runClient();
-}
-
 if (data.path && !isClientUsed) {
     for (let key in data.path) {
         if (!isClientUsed && data.path[key].path === path) {
@@ -39,49 +35,42 @@ if (data.path && !isClientUsed) {
     }
 }
 
-function runClient()
-{
+function runClient() {
     isClientUsed = true;
     require('claimRequest')();
 
     if (requestMethod === 'OPTIONS') {
         setResponseHeaders();
-
         returnResponse();
-    } else if (path === '/data/store') {
-        storeCookies();
-        setResponseHeaders();
-        setPixelResponse();
 
-        returnResponse();
-    } else {
-        let eventModel = {timestamp: makeInteger(getTimestampMillis()/1000)};
-
-        eventModel = addQueryParametersToEventModel(eventModel);
-        eventModel = addBodyParametersToEventModel(eventModel);
-        eventModel = addRequiredParametersToEventModel(eventModel);
-        eventModel = addDataTagParametersToEventModel(eventModel);
-        eventModel = addCommonParametersToEventModel(eventModel);
-        eventModel = addClientIdToEventModel(eventModel);
-        storeClientId(eventModel);
-        exposeFPIDCookie(eventModel);
-
-        runContainer(eventModel, () => {
-            setResponseHeaders();
-
-            if (requestMethod === 'POST' || data.responseBodyGet) {
-                prepareResponseBody(eventModel);
-                returnResponse();
-            } else {
-                setPixelResponse();
-                returnResponse();
-            }
-        });
+        return;
     }
+
+    let eventModel = {timestamp: makeInteger(getTimestampMillis() / 1000)};
+
+    eventModel = addQueryParametersToEventModel(eventModel);
+    eventModel = addBodyParametersToEventModel(eventModel);
+    eventModel = addRequiredParametersToEventModel(eventModel);
+    eventModel = addCommonParametersToEventModel(eventModel);
+    eventModel = addClientIdToEventModel(eventModel);
+    storeClientId(eventModel);
+    exposeFPIDCookie(eventModel);
+    prolongDataTagCookies(eventModel);
+
+    runContainer(eventModel, () => {
+        setResponseHeaders();
+
+        if (requestMethod === 'POST' || data.responseBodyGet) {
+            prepareResponseBody(eventModel);
+            returnResponse();
+        } else {
+            setPixelResponse();
+            returnResponse();
+        }
+    });
 }
 
-function addCommonParametersToEventModel(eventModel)
-{
+function addCommonParametersToEventModel(eventModel) {
     let userData = {};
     let userAddressData = {};
 
@@ -103,7 +92,7 @@ function addCommonParametersToEventModel(eventModel)
         const acceptLanguageHeader = getRequestHeader('Accept-Language');
 
         if (acceptLanguageHeader) {
-            eventModel.language = acceptLanguageHeader.split(';')[0].substring(0,2).toLowerCase();
+            eventModel.language = acceptLanguageHeader.split(';')[0].substring(0, 2).toLowerCase();
         }
     }
 
@@ -186,17 +175,16 @@ function addCommonParametersToEventModel(eventModel)
     return eventModel;
 }
 
-function addQueryParametersToEventModel(eventModel)
-{
+function addQueryParametersToEventModel(eventModel) {
     const requestQueryParameters = getRequestQueryParameters();
 
     if (requestQueryParameters) {
         for (let queryParameterKey in requestQueryParameters) {
-            if (queryParameterKey === 'dtcd' && requestMethod === 'GET') {
-                let dtcd = JSON.parse(requestQueryParameters[queryParameterKey]);
+            if ((queryParameterKey === 'dtcd' || queryParameterKey === 'dtdc') && requestMethod === 'GET') {
+                let dt = queryParameterKey === 'dtcd' ? JSON.parse(requestQueryParameters[queryParameterKey]) : JSON.parse(fromBase64(requestQueryParameters[queryParameterKey]));
 
-                for (let dtcdKey in dtcd) {
-                    eventModel[dtcdKey] = dtcd[dtcdKey];
+                for (let dtKey in dt) {
+                    eventModel[dtKey] = dt[dtKey];
                 }
             } else {
                 eventModel[queryParameterKey] = requestQueryParameters[queryParameterKey];
@@ -207,39 +195,18 @@ function addQueryParametersToEventModel(eventModel)
     return eventModel;
 }
 
-function addClientIdToEventModel(eventModel)
-{
-    if (eventModel.client_id) {
-        return eventModel;
-    }
+function addClientIdToEventModel(eventModel) {
+    if (eventModel.client_id) return eventModel;
 
-    if (eventModel.data_client_id) {
-        eventModel.client_id = eventModel.data_client_id;
-
-        return eventModel;
-    }
-
-    if (eventModel._dcid) {
-        eventModel.client_id = eventModel._dcid;
-
-        return eventModel;
-    }
-
-    if (getCookieValues('_dcid') && getCookieValues('_dcid')[0]) {
-        eventModel.client_id = getCookieValues('_dcid')[0];
-
-        return eventModel;
-    }
-
-    if (data.generateClientId) {
-        eventModel.client_id = 'dcid.1.' + getTimestampMillis() + '.' + generateRandom(100000000, 999999999);
-    }
+    if (eventModel.data_client_id) eventModel.client_id = eventModel.data_client_id;
+    else if (eventModel._dcid) eventModel.client_id = eventModel._dcid;
+    else if (getCookieValues('_dcid') && getCookieValues('_dcid')[0]) eventModel.client_id = getCookieValues('_dcid')[0];
+    else if (data.generateClientId) eventModel.client_id = 'dcid.1.' + getTimestampMillis() + '.' + generateRandom(100000000, 999999999);
 
     return eventModel;
 }
 
-function addBodyParametersToEventModel(eventModel)
-{
+function addBodyParametersToEventModel(eventModel) {
     const body = getRequestBody();
 
     if (body) {
@@ -247,13 +214,7 @@ function addBodyParametersToEventModel(eventModel)
 
         if (bodyJson) {
             for (let bodyKey in bodyJson) {
-                if (bodyKey === 'important_cookie_values') {
-                    eventModel = addImportantCookiesToEventModel(eventModel, bodyJson[bodyKey]);
-                } else if (bodyKey === 'data_tag_custom_data') {
-                    eventModel = addDataTagParametersToEventModel(eventModel, bodyJson[bodyKey]);
-                } else {
-                    eventModel[bodyKey] = bodyJson[bodyKey];
-                }
+                eventModel[bodyKey] = bodyJson[bodyKey];
             }
         }
     }
@@ -261,42 +222,15 @@ function addBodyParametersToEventModel(eventModel)
     return eventModel;
 }
 
-function addDataTagParametersToEventModel(eventModel, customData)
-{
-    for (let dataKey in customData) {
-        eventModel[customData[dataKey].name] = customData[dataKey].value;
-    }
+function prolongDataTagCookies(eventModel) {
+    if (data.prolongCookies) {
+        let stapeData = getCookieValues('stape_data');
 
-    return eventModel;
-}
-
-function addImportantCookiesToEventModel(eventModel, customData)
-{
-    for (let dataKey in customData) {
-        if (dataKey === '_fbp' || dataKey === '_fbc' || dataKey === '_dcid') {
-            let value = customData[dataKey];
-
-            if (value.length) {
-                eventModel[dataKey] = value[0];
-            }
-        }
-    }
-
-    return eventModel;
-}
-
-function storeCookies()
-{
-    let dataToStore = JSON.parse(fromBase64(getRequestQueryParameters().d));
-
-    for (let cookieName in dataToStore) {
-        let cookieValue = dataToStore[cookieName];
-
-        if (cookieValue.length) {
-            setCookie('stape_'+cookieName, cookieValue, {
+        if (stapeData.length) {
+            setCookie('stape_data', stapeData[0], {
                 domain: 'auto',
                 path: '/',
-                samesite: getCookieType({}),
+                samesite: getCookieType(eventModel),
                 secure: true,
                 'max-age': 63072000, // 2 years
                 httpOnly: false
@@ -305,8 +239,7 @@ function storeCookies()
     }
 }
 
-function addRequiredParametersToEventModel(eventModel)
-{
+function addRequiredParametersToEventModel(eventModel) {
     if (!eventModel.event_name) {
         let eventName = 'Data';
 
@@ -351,8 +284,8 @@ function storeClientId(eventModel) {
 
 function getObjectLength(object) {
     let length = 0;
-    for(let key in object) {
-        if(object.hasOwnProperty(key)) {
+    for (let key in object) {
+        if (object.hasOwnProperty(key)) {
             ++length;
         }
     }
@@ -360,6 +293,7 @@ function getObjectLength(object) {
 }
 
 function setResponseHeaders() {
+    setResponseHeader('Access-Control-Max-Age', 600);
     setResponseHeader('Access-Control-Allow-Origin', getRequestHeader('origin'));
     setResponseHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
     setResponseHeader('Access-Control-Allow-Headers', 'content-type,set-cookie,x-robots-tag,x-gtm-server-preview,x-stape-preview');
