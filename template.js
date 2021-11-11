@@ -56,10 +56,9 @@ function runClient() {
     storeClientId(eventModel);
     exposeFPIDCookie(eventModel);
     prolongDataTagCookies(eventModel);
+    setResponseHeaders();
 
     runContainer(eventModel, () => {
-        setResponseHeaders();
-
         if (requestMethod === 'POST' || data.responseBodyGet) {
             prepareResponseBody(eventModel);
             returnResponse();
@@ -110,6 +109,31 @@ function addCommonParametersToEventModel(eventModel) {
     if (!eventModel.page_referrer) {
         if (eventModel.pageReferrer) eventModel.page_referrer = eventModel.pageReferrer;
         else if (eventModel.referrer) eventModel.page_referrer = eventModel.referrer;
+    }
+
+    if (eventModel.items && eventModel.items[0]) {
+        if (!eventModel.currency && eventModel.items[0].currency) eventModel.currency = eventModel.items[0].currency;
+
+        if (!eventModel.items[1]) {
+            if (!eventModel.item_id && eventModel.items[0].item_id) eventModel.item_id = eventModel.items[0].item_id;
+            if (!eventModel.item_name && eventModel.items[0].item_name) eventModel.item_name = eventModel.items[0].item_name;
+            if (!eventModel.item_brand && eventModel.items[0].item_brand) eventModel.item_brand = eventModel.items[0].item_brand;
+            if (!eventModel.item_quantity && eventModel.items[0].quantity) eventModel.item_quantity = eventModel.items[0].quantity;
+            if (!eventModel.item_category && eventModel.items[0].item_category) eventModel.item_category = eventModel.items[0].item_category;
+
+            if (eventModel.items[0].price) {
+                if (!eventModel.item_price) eventModel.item_price = eventModel.items[0].price;
+                if (!eventModel.value) eventModel.value = eventModel.items[0].quantity ? eventModel.items[0].quantity * eventModel.items[0].price : eventModel.items[0].price;
+            }
+        } else if (!eventModel.value) {
+            let valueFromItems = 0;
+
+            eventModel.items.forEach((d) => {
+                if (d.price) valueFromItems += d.quantity ? d.quantity * d.price : d.price;
+            });
+
+            if (valueFromItems) eventModel.value = valueFromItems;
+        }
     }
 
     if (!userData.email_address) {
@@ -224,10 +248,10 @@ function addBodyParametersToEventModel(eventModel) {
 
 function prolongDataTagCookies(eventModel) {
     if (data.prolongCookies) {
-        let stapeData = getCookieValues('stape_data');
+        let stapeData = getCookieValues('stape');
 
         if (stapeData.length) {
-            setCookie('stape_data', stapeData[0], {
+            setCookie('stape', stapeData[0], {
                 domain: 'auto',
                 path: '/',
                 samesite: getCookieType(eventModel),
@@ -284,6 +308,7 @@ function storeClientId(eventModel) {
 
 function getObjectLength(object) {
     let length = 0;
+
     for (let key in object) {
         if (object.hasOwnProperty(key)) {
             ++length;
@@ -293,7 +318,7 @@ function getObjectLength(object) {
 }
 
 function setResponseHeaders() {
-    setResponseHeader('Access-Control-Max-Age', 600);
+    setResponseHeader('Access-Control-Max-Age', '600');
     setResponseHeader('Access-Control-Allow-Origin', getRequestHeader('origin'));
     setResponseHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
     setResponseHeader('Access-Control-Allow-Headers', 'content-type,set-cookie,x-robots-tag,x-gtm-server-preview,x-stape-preview');
