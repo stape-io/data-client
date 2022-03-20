@@ -1,5 +1,7 @@
 homepage: "https://stape.io/"
 versions:
+  - sha: 91da5a8f79c50216ecd882a1e7a478520b418e37
+    changeNotes: Update EE parsing.
   - sha: 65143e70107a90b10297d080d342b7056a74eefd
     changeNotes: Add additional data for EE events.
   - sha: fb78186e3fa6f49bde7a32b9e4714eaf4d1cce86
