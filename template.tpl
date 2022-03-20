@@ -261,6 +261,22 @@ function addCommonParametersToEventModel(eventModel) {
         }
     }
 
+    const ecommerceAction = getEcommerceAction(eventModel);
+
+    if (ecommerceAction) {
+        if (!eventModel['x-ga-mp1-pa']) eventModel['x-ga-mp1-pa'] = ecommerceAction;
+
+        if (ecommerceAction === 'purchase' && eventModel.ecommerce.purchase.actionField) {
+            if (!eventModel['x-ga-mp1-tr']) eventModel['x-ga-mp1-tr'] = eventModel.ecommerce.purchase.actionField.revenue;
+            if (!eventModel.revenue) eventModel.revenue = eventModel.ecommerce.purchase.actionField.revenue;
+            if (!eventModel.affiliation) eventModel.affiliation = eventModel.ecommerce.purchase.actionField.affiliation;
+            if (!eventModel.tax) eventModel.tax = eventModel.ecommerce.purchase.actionField.tax;
+            if (!eventModel.shipping) eventModel.shipping = eventModel.ecommerce.purchase.actionField.shipping;
+            if (!eventModel.coupon) eventModel.coupon = eventModel.ecommerce.purchase.actionField.coupon;
+            if (!eventModel.transaction_id) eventModel.transaction_id = eventModel.ecommerce.purchase.actionField.id;
+        }
+    }
+
     if (!userData.email_address) {
         if (eventModel.userEmail) userData.email_address = eventModel.userEmail;
         else if (eventModel.email_address) userData.email_address = eventModel.email_address;
@@ -486,6 +502,22 @@ function prepareResponseBody(eventModel) {
     setResponseBody(JSON.stringify({
         timestamp: eventModel.timestamp,
     }));
+}
+
+function getEcommerceAction(eventModel) {
+    if (eventModel.ecommerce) {
+        const actions = ['detail', 'click', 'add', 'remove', 'checkout', 'checkout_option', 'purchase', 'refund'];
+
+        for (let index = 0; index < actions.length; ++index) {
+            const action = actions[index];
+
+            if (eventModel.ecommerce[action]) {
+                return action;
+            }
+        }
+    }
+
+    return null;
 }
 
 
