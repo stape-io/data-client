@@ -1,5 +1,7 @@
 homepage: "https://stape.io/"
 versions:
+  - sha: 448e609ee33eedbfaa2070d70eb23b8776f95fe3
+    changeNotes: Add unique_event_id to eventData.
   - sha: 91da5a8f79c50216ecd882a1e7a478520b418e37
     changeNotes: Update EE parsing.
   - sha: 65143e70107a90b10297d080d342b7056a74eefd
