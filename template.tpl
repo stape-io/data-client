@@ -171,7 +171,10 @@ function runClient() {
         return;
     }
 
-    let eventModel = {timestamp: makeInteger(getTimestampMillis() / 1000)};
+    let eventModel = {
+        timestamp: makeInteger(getTimestampMillis() / 1000),
+        unique_event_id: getTimestampMillis() + '_' + generateRandom(100000000, 999999999)
+    };
 
     eventModel = addQueryParametersToEventModel(eventModel);
     eventModel = addBodyParametersToEventModel(eventModel);
@@ -501,6 +504,7 @@ function prepareResponseBody(eventModel) {
 
     setResponseBody(JSON.stringify({
         timestamp: eventModel.timestamp,
+        unique_event_id: eventModel.unique_event_id,
     }));
 }
 
