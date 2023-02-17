@@ -149,379 +149,472 @@ const path = getRequestPath();
 let isClientUsed = false;
 
 if (path === '/data') {
-    runClient();
+  runClient();
 }
 
 if (data.path && !isClientUsed) {
-    for (let key in data.path) {
-        if (!isClientUsed && data.path[key].path === path) {
-            runClient();
-        }
+  for (let key in data.path) {
+    if (!isClientUsed && data.path[key].path === path) {
+      runClient();
     }
+  }
 }
 
 function runClient() {
-    isClientUsed = true;
-    require('claimRequest')();
+  isClientUsed = true;
+  require('claimRequest')();
 
-    if (requestMethod === 'OPTIONS') {
-        setResponseHeaders();
-        returnResponse();
-
-        return;
-    }
-
-    let eventModel = {
-        timestamp: makeInteger(getTimestampMillis() / 1000),
-        unique_event_id: getTimestampMillis() + '_' + generateRandom(100000000, 999999999)
-    };
-
-    eventModel = addQueryParametersToEventModel(eventModel);
-    eventModel = addBodyParametersToEventModel(eventModel);
-    eventModel = addRequiredParametersToEventModel(eventModel);
-    eventModel = addCommonParametersToEventModel(eventModel);
-    eventModel = addClientIdToEventModel(eventModel);
-    storeClientId(eventModel);
-    exposeFPIDCookie(eventModel);
-    prolongDataTagCookies(eventModel);
+  if (requestMethod === 'OPTIONS') {
     setResponseHeaders();
+    returnResponse();
 
-    runContainer(eventModel, () => {
-        if (requestMethod === 'POST' || data.responseBodyGet) {
-            prepareResponseBody(eventModel);
-            returnResponse();
-        } else {
-            setPixelResponse();
-            returnResponse();
-        }
-    });
+    return;
+  }
+
+  let eventModel = {
+    timestamp: makeInteger(getTimestampMillis() / 1000),
+    unique_event_id:
+      getTimestampMillis() + '_' + generateRandom(100000000, 999999999),
+  };
+
+  eventModel = addQueryParametersToEventModel(eventModel);
+  eventModel = addBodyParametersToEventModel(eventModel);
+  eventModel = addRequiredParametersToEventModel(eventModel);
+  eventModel = addCommonParametersToEventModel(eventModel);
+  eventModel = addClientIdToEventModel(eventModel);
+  storeClientId(eventModel);
+  exposeFPIDCookie(eventModel);
+  prolongDataTagCookies(eventModel);
+  setResponseHeaders();
+
+  runContainer(eventModel, () => {
+    if (requestMethod === 'POST' || data.responseBodyGet) {
+      prepareResponseBody(eventModel);
+      returnResponse();
+    } else {
+      setPixelResponse();
+      returnResponse();
+    }
+  });
 }
 
 function addCommonParametersToEventModel(eventModel) {
-    let userData = {};
-    let userAddressData = {};
+  let userData = {};
+  let userAddressData = {};
 
-    if (eventModel.user_data) userData = eventModel.user_data;
-    if (userData.address) userAddressData = userData.address;
+  if (eventModel.user_data) userData = eventModel.user_data;
+  if (userData.address) userAddressData = userData.address;
 
-    if (!eventModel.ip_override) {
-        if (eventModel.ip) eventModel.ip_override = eventModel.ip;
-        else if (eventModel.ipOverride) eventModel.ip_override = eventModel.ipOverride;
-        else eventModel.ip_override = getRemoteAddress();
+  if (!eventModel.ip_override) {
+    if (eventModel.ip) eventModel.ip_override = eventModel.ip;
+    else if (eventModel.ipOverride)
+      eventModel.ip_override = eventModel.ipOverride;
+    else eventModel.ip_override = getRemoteAddress();
+  }
+
+  if (!eventModel.user_agent) {
+    if (eventModel.userAgent) eventModel.user_agent = eventModel.userAgent;
+    else if (getRequestHeader('User-Agent'))
+      eventModel.user_agent = getRequestHeader('User-Agent');
+  }
+
+  if (!eventModel.language) {
+    const acceptLanguageHeader = getRequestHeader('Accept-Language');
+
+    if (acceptLanguageHeader) {
+      eventModel.language = acceptLanguageHeader
+        .split(';')[0]
+        .substring(0, 2)
+        .toLowerCase();
     }
+  }
 
-    if (!eventModel.user_agent) {
-        if (eventModel.userAgent) eventModel.user_agent = eventModel.userAgent;
-        else if (getRequestHeader('User-Agent')) eventModel.user_agent = getRequestHeader('User-Agent');
+  if (!eventModel.page_hostname) {
+    if (eventModel.pageHostname)
+      eventModel.page_hostname = eventModel.pageHostname;
+    else if (eventModel.hostname)
+      eventModel.page_hostname = eventModel.hostname;
+  }
+
+  if (!eventModel.page_location) {
+    if (eventModel.pageLocation)
+      eventModel.page_location = eventModel.pageLocation;
+    else if (eventModel.url) eventModel.page_location = eventModel.url;
+    else if (eventModel.href) eventModel.page_location = eventModel.href;
+  }
+
+  if (!eventModel.page_referrer) {
+    if (eventModel.pageReferrer)
+      eventModel.page_referrer = eventModel.pageReferrer;
+    else if (eventModel.referrer)
+      eventModel.page_referrer = eventModel.referrer;
+  }
+
+  if (eventModel.items && eventModel.items[0]) {
+    if (!eventModel.currency && eventModel.items[0].currency)
+      eventModel.currency = eventModel.items[0].currency;
+
+    if (!eventModel.items[1]) {
+      if (!eventModel.item_id && eventModel.items[0].item_id)
+        eventModel.item_id = eventModel.items[0].item_id;
+      if (!eventModel.item_name && eventModel.items[0].item_name)
+        eventModel.item_name = eventModel.items[0].item_name;
+      if (!eventModel.item_brand && eventModel.items[0].item_brand)
+        eventModel.item_brand = eventModel.items[0].item_brand;
+      if (!eventModel.item_quantity && eventModel.items[0].quantity)
+        eventModel.item_quantity = eventModel.items[0].quantity;
+      if (!eventModel.item_category && eventModel.items[0].item_category)
+        eventModel.item_category = eventModel.items[0].item_category;
+
+      if (eventModel.items[0].price) {
+        if (!eventModel.item_price)
+          eventModel.item_price = eventModel.items[0].price;
+        if (!eventModel.value)
+          eventModel.value = eventModel.items[0].quantity
+            ? eventModel.items[0].quantity * eventModel.items[0].price
+            : eventModel.items[0].price;
+      }
+    } else if (!eventModel.value) {
+      let valueFromItems = 0;
+
+      eventModel.items.forEach((d) => {
+        if (d.price)
+          valueFromItems += d.quantity ? d.quantity * d.price : d.price;
+      });
+
+      if (valueFromItems) eventModel.value = valueFromItems;
     }
+  }
 
-    if (!eventModel.language) {
-        const acceptLanguageHeader = getRequestHeader('Accept-Language');
+  const ecommerceAction = getEcommerceAction(eventModel);
 
-        if (acceptLanguageHeader) {
-            eventModel.language = acceptLanguageHeader.split(';')[0].substring(0, 2).toLowerCase();
-        }
+  if (ecommerceAction) {
+    if (!eventModel['x-ga-mp1-pa']) eventModel['x-ga-mp1-pa'] = ecommerceAction;
+
+    if (
+      ecommerceAction === 'purchase' &&
+      eventModel.ecommerce.purchase.actionField
+    ) {
+      if (!eventModel['x-ga-mp1-tr'])
+        eventModel['x-ga-mp1-tr'] =
+          eventModel.ecommerce.purchase.actionField.revenue;
+      if (!eventModel.revenue)
+        eventModel.revenue = eventModel.ecommerce.purchase.actionField.revenue;
+      if (!eventModel.affiliation)
+        eventModel.affiliation =
+          eventModel.ecommerce.purchase.actionField.affiliation;
+      if (!eventModel.tax)
+        eventModel.tax = eventModel.ecommerce.purchase.actionField.tax;
+      if (!eventModel.shipping)
+        eventModel.shipping =
+          eventModel.ecommerce.purchase.actionField.shipping;
+      if (!eventModel.coupon)
+        eventModel.coupon = eventModel.ecommerce.purchase.actionField.coupon;
+      if (!eventModel.transaction_id)
+        eventModel.transaction_id =
+          eventModel.ecommerce.purchase.actionField.id;
     }
+  }
 
-    if (!eventModel.page_hostname) {
-        if (eventModel.pageHostname) eventModel.page_hostname = eventModel.pageHostname;
-        else if (eventModel.hostname) eventModel.page_hostname = eventModel.hostname;
-    }
+  if (!userData.email_address) {
+    if (eventModel.userEmail) userData.email_address = eventModel.userEmail;
+    else if (eventModel.email_address)
+      userData.email_address = eventModel.email_address;
+    else if (eventModel.email) userData.email_address = eventModel.email;
+    else if (eventModel.mail) userData.email_address = eventModel.mail;
+  }
 
-    if (!eventModel.page_location) {
-        if (eventModel.pageLocation) eventModel.page_location = eventModel.pageLocation;
-        else if (eventModel.url) eventModel.page_location = eventModel.url;
-        else if (eventModel.href) eventModel.page_location = eventModel.href;
-    }
+  if (!userData.phone_number) {
+    if (eventModel.userPhoneNumber)
+      userData.phone_number = eventModel.userPhoneNumber;
+    else if (eventModel.phone_number)
+      userData.phone_number = eventModel.phone_number;
+    else if (eventModel.phoneNumber)
+      userData.phone_number = eventModel.phoneNumber;
+    else if (eventModel.phone) userData.phone_number = eventModel.phone;
+  }
 
-    if (!eventModel.page_referrer) {
-        if (eventModel.pageReferrer) eventModel.page_referrer = eventModel.pageReferrer;
-        else if (eventModel.referrer) eventModel.page_referrer = eventModel.referrer;
-    }
+  if (!eventModel.page_encoding && eventModel.pageEncoding)
+    eventModel.page_encoding = eventModel.pageEncoding;
+  if (!eventModel.page_path && eventModel.pagePath)
+    eventModel.page_path = eventModel.pagePath;
+  if (!eventModel.page_title && eventModel.pageTitle)
+    eventModel.page_title = eventModel.pageTitle;
+  if (!eventModel.screen_resolution && eventModel.screenResolution)
+    eventModel.screen_resolution = eventModel.screenResolution;
+  if (!eventModel.viewport_size && eventModel.viewportSize)
+    eventModel.viewport_size = eventModel.viewportSize;
+  if (!eventModel.user_id && eventModel.userId)
+    eventModel.user_id = eventModel.userId;
+  if (!userAddressData.street && eventModel.street)
+    userAddressData.street = eventModel.street;
+  if (!userAddressData.city && eventModel.city)
+    userAddressData.city = eventModel.city;
+  if (!userAddressData.region && eventModel.region)
+    userAddressData.region = eventModel.region;
+  if (!userAddressData.country && eventModel.country)
+    userAddressData.country = eventModel.country;
 
-    if (eventModel.items && eventModel.items[0]) {
-        if (!eventModel.currency && eventModel.items[0].currency) eventModel.currency = eventModel.items[0].currency;
+  if (!userAddressData.first_name) {
+    if (eventModel.userFirstName)
+      userAddressData.first_name = eventModel.userFirstName;
+    else if (eventModel.first_name)
+      userAddressData.first_name = eventModel.first_name;
+    else if (eventModel.firstName)
+      userAddressData.first_name = eventModel.firstName;
+    else if (eventModel.name) userAddressData.first_name = eventModel.name;
+  }
 
-        if (!eventModel.items[1]) {
-            if (!eventModel.item_id && eventModel.items[0].item_id) eventModel.item_id = eventModel.items[0].item_id;
-            if (!eventModel.item_name && eventModel.items[0].item_name) eventModel.item_name = eventModel.items[0].item_name;
-            if (!eventModel.item_brand && eventModel.items[0].item_brand) eventModel.item_brand = eventModel.items[0].item_brand;
-            if (!eventModel.item_quantity && eventModel.items[0].quantity) eventModel.item_quantity = eventModel.items[0].quantity;
-            if (!eventModel.item_category && eventModel.items[0].item_category) eventModel.item_category = eventModel.items[0].item_category;
+  if (!userAddressData.last_name) {
+    if (eventModel.userLastName)
+      userAddressData.last_name = eventModel.userLastName;
+    else if (eventModel.last_name)
+      userAddressData.last_name = eventModel.last_name;
+    else if (eventModel.lastName)
+      userAddressData.last_name = eventModel.lastName;
+    else if (eventModel.surname) userAddressData.last_name = eventModel.surname;
+    else if (eventModel.family_name)
+      userAddressData.last_name = eventModel.family_name;
+    else if (eventModel.familyName)
+      userAddressData.last_name = eventModel.familyName;
+  }
 
-            if (eventModel.items[0].price) {
-                if (!eventModel.item_price) eventModel.item_price = eventModel.items[0].price;
-                if (!eventModel.value) eventModel.value = eventModel.items[0].quantity ? eventModel.items[0].quantity * eventModel.items[0].price : eventModel.items[0].price;
-            }
-        } else if (!eventModel.value) {
-            let valueFromItems = 0;
+  if (!userAddressData.region) {
+    if (eventModel.region) userAddressData.region = eventModel.region;
+    else if (eventModel.state) userAddressData.region = eventModel.state;
+  }
 
-            eventModel.items.forEach((d) => {
-                if (d.price) valueFromItems += d.quantity ? d.quantity * d.price : d.price;
-            });
+  if (!userAddressData.postal_code) {
+    if (eventModel.postal_code)
+      userAddressData.postal_code = eventModel.postal_code;
+    else if (eventModel.postalCode)
+      userAddressData.postal_code = eventModel.postalCode;
+    else if (eventModel.zip) userAddressData.postal_code = eventModel.zip;
+  }
 
-            if (valueFromItems) eventModel.value = valueFromItems;
-        }
-    }
+  if (getObjectLength(userAddressData) !== 0) {
+    userData.address = userAddressData;
+  }
 
-    const ecommerceAction = getEcommerceAction(eventModel);
+  if (getObjectLength(userData) !== 0) {
+    eventModel.user_data = userData;
+  }
 
-    if (ecommerceAction) {
-        if (!eventModel['x-ga-mp1-pa']) eventModel['x-ga-mp1-pa'] = ecommerceAction;
-
-        if (ecommerceAction === 'purchase' && eventModel.ecommerce.purchase.actionField) {
-            if (!eventModel['x-ga-mp1-tr']) eventModel['x-ga-mp1-tr'] = eventModel.ecommerce.purchase.actionField.revenue;
-            if (!eventModel.revenue) eventModel.revenue = eventModel.ecommerce.purchase.actionField.revenue;
-            if (!eventModel.affiliation) eventModel.affiliation = eventModel.ecommerce.purchase.actionField.affiliation;
-            if (!eventModel.tax) eventModel.tax = eventModel.ecommerce.purchase.actionField.tax;
-            if (!eventModel.shipping) eventModel.shipping = eventModel.ecommerce.purchase.actionField.shipping;
-            if (!eventModel.coupon) eventModel.coupon = eventModel.ecommerce.purchase.actionField.coupon;
-            if (!eventModel.transaction_id) eventModel.transaction_id = eventModel.ecommerce.purchase.actionField.id;
-        }
-    }
-
-    if (!userData.email_address) {
-        if (eventModel.userEmail) userData.email_address = eventModel.userEmail;
-        else if (eventModel.email_address) userData.email_address = eventModel.email_address;
-        else if (eventModel.email) userData.email_address = eventModel.email;
-        else if (eventModel.mail) userData.email_address = eventModel.mail;
-    }
-
-    if (!userData.phone_number) {
-        if (eventModel.userPhoneNumber) userData.phone_number = eventModel.userPhoneNumber;
-        else if (eventModel.phone_number) userData.phone_number = eventModel.phone_number;
-        else if (eventModel.phoneNumber) userData.phone_number = eventModel.phoneNumber;
-        else if (eventModel.phone) userData.phone_number = eventModel.phone;
-    }
-
-    if (!eventModel.page_encoding && eventModel.pageEncoding) eventModel.page_encoding = eventModel.pageEncoding;
-    if (!eventModel.page_path && eventModel.pagePath) eventModel.page_path = eventModel.pagePath;
-    if (!eventModel.page_title && eventModel.pageTitle) eventModel.page_title = eventModel.pageTitle;
-    if (!eventModel.screen_resolution && eventModel.screenResolution) eventModel.screen_resolution = eventModel.screenResolution;
-    if (!eventModel.viewport_size && eventModel.viewportSize) eventModel.viewport_size = eventModel.viewportSize;
-    if (!eventModel.user_id && eventModel.userId) eventModel.user_id = eventModel.userId;
-    if (!userAddressData.street && eventModel.street) userAddressData.street = eventModel.street;
-    if (!userAddressData.city && eventModel.city) userAddressData.city = eventModel.city;
-    if (!userAddressData.region && eventModel.region) userAddressData.region = eventModel.region;
-    if (!userAddressData.country && eventModel.country) userAddressData.country = eventModel.country;
-
-    if (!userAddressData.first_name) {
-        if (eventModel.userFirstName) userAddressData.first_name = eventModel.userFirstName;
-        else if (eventModel.first_name) userAddressData.first_name = eventModel.first_name;
-        else if (eventModel.firstName) userAddressData.first_name = eventModel.firstName;
-        else if (eventModel.name) userAddressData.first_name = eventModel.name;
-    }
-
-    if (!userAddressData.last_name) {
-        if (eventModel.userLastName) userAddressData.last_name = eventModel.userLastName;
-        else if (eventModel.last_name) userAddressData.last_name = eventModel.last_name;
-        else if (eventModel.lastName) userAddressData.last_name = eventModel.lastName;
-        else if (eventModel.surname) userAddressData.last_name = eventModel.surname;
-        else if (eventModel.family_name) userAddressData.last_name = eventModel.family_name;
-        else if (eventModel.familyName) userAddressData.last_name = eventModel.familyName;
-    }
-
-    if (!userAddressData.region) {
-        if (eventModel.region) userAddressData.region = eventModel.region;
-        else if (eventModel.state) userAddressData.region = eventModel.state;
-    }
-
-    if (!userAddressData.postal_code) {
-        if (eventModel.postal_code) userAddressData.postal_code = eventModel.postal_code;
-        else if (eventModel.postalCode) userAddressData.postal_code = eventModel.postalCode;
-        else if (eventModel.zip) userAddressData.postal_code = eventModel.zip;
-    }
-
-    if (getObjectLength(userAddressData) !== 0) {
-        userData.address = userAddressData;
-    }
-
-    if (getObjectLength(userData) !== 0) {
-        eventModel.user_data = userData;
-    }
-
-    return eventModel;
+  return eventModel;
 }
 
 function addQueryParametersToEventModel(eventModel) {
-    const requestQueryParameters = getRequestQueryParameters();
+  const requestQueryParameters = getRequestQueryParameters();
 
-    if (requestQueryParameters) {
-        for (let queryParameterKey in requestQueryParameters) {
-            if ((queryParameterKey === 'dtcd' || queryParameterKey === 'dtdc') && requestMethod === 'GET') {
-                let dt = queryParameterKey === 'dtcd' ? JSON.parse(requestQueryParameters[queryParameterKey]) : JSON.parse(fromBase64(requestQueryParameters[queryParameterKey]));
+  if (requestQueryParameters) {
+    for (let queryParameterKey in requestQueryParameters) {
+      if (
+        (queryParameterKey === 'dtcd' || queryParameterKey === 'dtdc') &&
+        requestMethod === 'GET'
+      ) {
+        let dt =
+          queryParameterKey === 'dtcd'
+            ? JSON.parse(requestQueryParameters[queryParameterKey])
+            : JSON.parse(fromBase64(requestQueryParameters[queryParameterKey]));
 
-                for (let dtKey in dt) {
-                    eventModel[dtKey] = dt[dtKey];
-                }
-            } else {
-                eventModel[queryParameterKey] = requestQueryParameters[queryParameterKey];
-            }
+        for (let dtKey in dt) {
+          eventModel[dtKey] = dt[dtKey];
         }
+      } else {
+        eventModel[queryParameterKey] =
+          requestQueryParameters[queryParameterKey];
+      }
     }
+  }
 
-    return eventModel;
+  return eventModel;
 }
 
 function addClientIdToEventModel(eventModel) {
-    if (eventModel.client_id) return eventModel;
+  if (eventModel.client_id) return eventModel;
 
-    if (eventModel.data_client_id) eventModel.client_id = eventModel.data_client_id;
-    else if (eventModel._dcid) eventModel.client_id = eventModel._dcid;
-    else if (getCookieValues('_dcid') && getCookieValues('_dcid')[0]) eventModel.client_id = getCookieValues('_dcid')[0];
-    else if (data.generateClientId) eventModel.client_id = 'dcid.1.' + getTimestampMillis() + '.' + generateRandom(100000000, 999999999);
+  if (eventModel.data_client_id)
+    eventModel.client_id = eventModel.data_client_id;
+  else if (eventModel._dcid) eventModel.client_id = eventModel._dcid;
+  else if (getCookieValues('_dcid') && getCookieValues('_dcid')[0])
+    eventModel.client_id = getCookieValues('_dcid')[0];
+  else if (data.generateClientId)
+    eventModel.client_id =
+      'dcid.1.' +
+      getTimestampMillis() +
+      '.' +
+      generateRandom(100000000, 999999999);
 
-    return eventModel;
+  return eventModel;
 }
 
 function addBodyParametersToEventModel(eventModel) {
-    const body = getRequestBody();
+  const body = getRequestBody();
 
-    if (body) {
-        const bodyJson = JSON.parse(body);
+  if (body) {
+    const bodyJson = JSON.parse(body);
 
-        if (bodyJson) {
-            for (let bodyKey in bodyJson) {
-                eventModel[bodyKey] = bodyJson[bodyKey];
-            }
-        }
+    if (bodyJson) {
+      for (let bodyKey in bodyJson) {
+        eventModel[bodyKey] = bodyJson[bodyKey];
+      }
     }
+  }
 
-    return eventModel;
+  return eventModel;
 }
 
 function prolongDataTagCookies(eventModel) {
-    if (data.prolongCookies) {
-        let stapeData = getCookieValues('stape');
+  if (data.prolongCookies) {
+    let stapeData = getCookieValues('stape');
 
-        if (stapeData.length) {
-            setCookie('stape', stapeData[0], {
-                domain: 'auto',
-                path: '/',
-                samesite: getCookieType(eventModel),
-                secure: true,
-                'max-age': 63072000, // 2 years
-                httpOnly: false
-            });
-        }
+    if (stapeData.length) {
+      setCookie('stape', stapeData[0], {
+        domain: 'auto',
+        path: '/',
+        samesite: getCookieType(eventModel),
+        secure: true,
+        'max-age': 63072000, // 2 years
+        httpOnly: false,
+      });
     }
+  }
 }
 
 function addRequiredParametersToEventModel(eventModel) {
-    if (!eventModel.event_name) {
-        let eventName = 'Data';
+  if (!eventModel.event_name) {
+    let eventName = 'Data';
 
-        if (eventModel.eventName) eventName = eventModel.eventName;
-        else if (eventModel.event) eventName = eventModel.event;
+    if (eventModel.eventName) eventName = eventModel.eventName;
+    else if (eventModel.event) eventName = eventModel.event;
 
-        eventModel.event_name = eventName;
-    }
+    eventModel.event_name = eventName;
+  }
 
-    return eventModel;
+  return eventModel;
 }
 
 function exposeFPIDCookie(eventModel) {
-    if (data.exposeFPIDCookie) {
-        let fpid = getCookieValues('FPID');
+  if (data.exposeFPIDCookie) {
+    let fpid = getCookieValues('FPID');
 
-        if (fpid.length) {
-            setCookie('FPIDP', fpid[0], {
-                domain: 'auto',
-                path: '/',
-                samesite: getCookieType(eventModel),
-                secure: true,
-                'max-age': 63072000, // 2 years
-                httpOnly: false
-            });
-        }
+    if (fpid.length) {
+      setCookie('FPIDP', fpid[0], {
+        domain: 'auto',
+        path: '/',
+        samesite: getCookieType(eventModel),
+        secure: true,
+        'max-age': 63072000, // 2 years
+        httpOnly: false,
+      });
     }
+  }
 }
 
 function storeClientId(eventModel) {
-    if (data.generateClientId) {
-        setCookie('_dcid', eventModel.client_id, {
-            domain: 'auto',
-            path: '/',
-            samesite: getCookieType(eventModel),
-            secure: true,
-            'max-age': 63072000, // 2 years
-            httpOnly: false
-        });
-    }
+  if (data.generateClientId) {
+    setCookie('_dcid', eventModel.client_id, {
+      domain: 'auto',
+      path: '/',
+      samesite: getCookieType(eventModel),
+      secure: true,
+      'max-age': 63072000, // 2 years
+      httpOnly: false,
+    });
+  }
 }
 
 function getObjectLength(object) {
-    let length = 0;
+  let length = 0;
 
-    for (let key in object) {
-        if (object.hasOwnProperty(key)) {
-            ++length;
-        }
+  for (let key in object) {
+    if (object.hasOwnProperty(key)) {
+      ++length;
     }
-    return length;
+  }
+  return length;
 }
 
 function setResponseHeaders() {
-    setResponseHeader('Access-Control-Max-Age', '600');
-    setResponseHeader('Access-Control-Allow-Origin', getRequestHeader('origin'));
-    setResponseHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-    setResponseHeader('Access-Control-Allow-Headers', 'content-type,set-cookie,x-robots-tag,x-gtm-server-preview,x-stape-preview');
-    setResponseHeader('Access-Control-Allow-Credentials', 'true');
-    setResponseStatus(200);
+  setResponseHeader('Access-Control-Max-Age', '600');
+  setResponseHeader('Access-Control-Allow-Origin', getRequestHeader('origin'));
+  setResponseHeader(
+    'Access-Control-Allow-Methods',
+    'GET,POST,PUT,DELETE,OPTIONS'
+  );
+  setResponseHeader(
+    'Access-Control-Allow-Headers',
+    'content-type,set-cookie,x-robots-tag,x-gtm-server-preview,x-stape-preview'
+  );
+  setResponseHeader('Access-Control-Allow-Credentials', 'true');
+  setResponseStatus(200);
 }
 
 function getCookieType(eventModel) {
-    if (!eventModel.page_location) {
-        return 'Lax';
-    }
+  if (!eventModel.page_location) {
+    return 'Lax';
+  }
 
-    const host = getRequestHeader('host');
-    const effectiveTldPlusOne = computeEffectiveTldPlusOne(eventModel.page_location);
+  const host = getRequestHeader('host');
+  const effectiveTldPlusOne = computeEffectiveTldPlusOne(
+    eventModel.page_location
+  );
 
-    if (!host || !effectiveTldPlusOne) {
-        return 'Lax';
-    }
+  if (!host || !effectiveTldPlusOne) {
+    return 'Lax';
+  }
 
-    if (host && host.indexOf(effectiveTldPlusOne) !== -1) {
-        return 'Lax';
-    }
+  if (host && host.indexOf(effectiveTldPlusOne) !== -1) {
+    return 'Lax';
+  }
 
-    return 'None';
+  return 'None';
 }
 
 function prepareResponseBody(eventModel) {
-    if (data.responseBody === 'empty') {
-        return;
-    }
+  if (data.responseBody === 'empty') {
+    return;
+  }
 
-    setResponseHeader('Content-Type', 'application/json');
+  setResponseHeader('Content-Type', 'application/json');
 
-    if (data.responseBody === 'eventData') {
-        setResponseBody(JSON.stringify(eventModel));
+  if (data.responseBody === 'eventData') {
+    setResponseBody(JSON.stringify(eventModel));
 
-        return;
-    }
+    return;
+  }
 
-    setResponseBody(JSON.stringify({
-        timestamp: eventModel.timestamp,
-        unique_event_id: eventModel.unique_event_id,
-    }));
+  setResponseBody(
+    JSON.stringify({
+      timestamp: eventModel.timestamp,
+      unique_event_id: eventModel.unique_event_id,
+    })
+  );
 }
 
 function getEcommerceAction(eventModel) {
-    if (eventModel.ecommerce) {
-        const actions = ['detail', 'click', 'add', 'remove', 'checkout', 'checkout_option', 'purchase', 'refund'];
+  if (eventModel.ecommerce) {
+    const actions = [
+      'detail',
+      'click',
+      'add',
+      'remove',
+      'checkout',
+      'checkout_option',
+      'purchase',
+      'refund',
+    ];
 
-        for (let index = 0; index < actions.length; ++index) {
-            const action = actions[index];
+    for (let index = 0; index < actions.length; ++index) {
+      const action = actions[index];
 
-            if (eventModel.ecommerce[action]) {
-                return action;
-            }
-        }
+      if (eventModel.ecommerce[action]) {
+        return action;
+      }
     }
+  }
 
-    return null;
+  return null;
 }
 
 
