@@ -18,6 +18,7 @@ const setCookie = require('setCookie');
 const setPixelResponse = require('setPixelResponse');
 const generateRandom = require('generateRandom');
 const computeEffectiveTldPlusOne = require('computeEffectiveTldPlusOne');
+const getRequestQueryParameter = require('getRequestQueryParameter');
 
 const requestMethod = getRequestMethod();
 const path = getRequestPath();
@@ -40,9 +41,8 @@ function runClient() {
   require('claimRequest')();
 
   if (requestMethod === 'OPTIONS') {
-    setResponseHeaders();
+    setResponseHeaders(200);
     returnResponse();
-
     return;
   }
 
@@ -60,16 +60,30 @@ function runClient() {
   storeClientId(eventModel);
   exposeFPIDCookie(eventModel);
   prolongDataTagCookies(eventModel);
-  setResponseHeaders();
+  const responseStatusCode = makeInteger(data.responseStatusCode);
+  setResponseHeaders(responseStatusCode);
 
   runContainer(eventModel, () => {
-    if (requestMethod === 'POST' || data.responseBodyGet) {
-      prepareResponseBody(eventModel);
-      returnResponse();
-    } else {
-      setPixelResponse();
-      returnResponse();
+    switch (responseStatusCode) {
+      case 200:
+      case 201:
+        if (requestMethod === 'POST' || data.responseBodyGet) {
+          prepareResponseBody(eventModel);
+        } else {
+          setPixelResponse();
+        }
+        break;
+      case 301:
+      case 302:
+        setRedirectLocation();
+        break;
+      case 403:
+      case 404:
+        setClientErrorResponseMessage();
+        break;
     }
+
+    returnResponse();
   });
 }
 
@@ -410,7 +424,7 @@ function getObjectLength(object) {
   return length;
 }
 
-function setResponseHeaders() {
+function setResponseHeaders(statusCode) {
   setResponseHeader('Access-Control-Max-Age', '600');
   setResponseHeader('Access-Control-Allow-Origin', getRequestHeader('origin'));
   setResponseHeader(
@@ -422,7 +436,7 @@ function setResponseHeaders() {
     'content-type,set-cookie,x-robots-tag,x-gtm-server-preview,x-stape-preview'
   );
   setResponseHeader('Access-Control-Allow-Credentials', 'true');
-  setResponseStatus(200);
+  setResponseStatus(statusCode);
 }
 
 function getCookieType(eventModel) {
@@ -490,4 +504,22 @@ function getEcommerceAction(eventModel) {
   }
 
   return null;
+}
+
+function setRedirectLocation() {
+  let location = data.redirectTo;
+
+  if (data.lookupForRedirectToParam && data.redirectToQueryParamName) {
+    const param = getRequestQueryParameter(data.redirectToQueryParamName);
+    if (param && param.startsWith('http')) {
+      location = param;
+    }
+  }
+  setResponseHeaders('location', location);
+}
+
+function setClientErrorResponseMessage() {
+  if (data.clientErrorResponseMessage) {
+    setResponseBody(data.clientErrorResponseMessage);
+  }
 }
