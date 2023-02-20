@@ -1,5 +1,7 @@
 homepage: "https://stape.io/"
 versions:
+  - sha: 42a2c80254ef261b4c79e4414ff4525a239856af
+    changeNotes: Allow to configure custom redirects.
   - sha: 448e609ee33eedbfaa2070d70eb23b8776f95fe3
     changeNotes: Add unique_event_id to eventData.
   - sha: 91da5a8f79c50216ecd882a1e7a478520b418e37
