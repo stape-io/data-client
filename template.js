@@ -19,10 +19,13 @@ const setPixelResponse = require('setPixelResponse');
 const generateRandom = require('generateRandom');
 const computeEffectiveTldPlusOne = require('computeEffectiveTldPlusOne');
 const getRequestQueryParameter = require('getRequestQueryParameter');
+const getType = require('getType');
+const Promise = require('Promise');
 
 const requestMethod = getRequestMethod();
 const path = getRequestPath();
 let isClientUsed = false;
+let isEventModelsWrappedInArray = false;
 
 if (path === '/data') {
   runClient();
@@ -45,30 +48,34 @@ function runClient() {
     returnResponse();
     return;
   }
+  const baseEventModel = getBaseEventModelWithQueryParameters();
+  let eventModels = getEventModels(baseEventModel);
+  const clientId = getClientId(eventModels);
+  eventModels = eventModels.map((eventModel) => {
+    eventModel = addRequiredParametersToEventModel(eventModel);
+    eventModel = addCommonParametersToEventModel(eventModel);
+    eventModel = addClientIdToEventModel(eventModel, clientId);
+    return eventModel;
+  });
 
-  let eventModel = {
-    timestamp: makeInteger(getTimestampMillis() / 1000),
-    unique_event_id:
-      getTimestampMillis() + '_' + generateRandom(100000000, 999999999),
-  };
-
-  eventModel = addQueryParametersToEventModel(eventModel);
-  eventModel = addBodyParametersToEventModel(eventModel);
-  eventModel = addRequiredParametersToEventModel(eventModel);
-  eventModel = addCommonParametersToEventModel(eventModel);
-  eventModel = addClientIdToEventModel(eventModel);
-  storeClientId(eventModel);
-  exposeFPIDCookie(eventModel);
-  prolongDataTagCookies(eventModel);
+  storeClientId(eventModels[0]);
+  exposeFPIDCookie(eventModels[0]);
+  prolongDataTagCookies(eventModels[0]);
   const responseStatusCode = makeInteger(data.responseStatusCode);
   setResponseHeaders(responseStatusCode);
 
-  runContainer(eventModel, () => {
+  Promise.all(
+    eventModels.map((eventModel) => {
+      return Promise.create((resolve) => {
+        runContainer(eventModel, resolve);
+      });
+    })
+  ).then(() => {
     switch (responseStatusCode) {
       case 200:
       case 201:
         if (requestMethod === 'POST' || data.responseBodyGet) {
-          prepareResponseBody(eventModel);
+          prepareResponseBody(eventModels);
         } else {
           setPixelResponse();
         }
@@ -292,8 +299,9 @@ function addCommonParametersToEventModel(eventModel) {
   return eventModel;
 }
 
-function addQueryParametersToEventModel(eventModel) {
+function getBaseEventModelWithQueryParameters() {
   const requestQueryParameters = getRequestQueryParameters();
+  const eventModel = {};
 
   if (requestQueryParameters) {
     for (let queryParameterKey in requestQueryParameters) {
@@ -319,37 +327,8 @@ function addQueryParametersToEventModel(eventModel) {
   return eventModel;
 }
 
-function addClientIdToEventModel(eventModel) {
-  if (eventModel.client_id) return eventModel;
-
-  if (eventModel.data_client_id)
-    eventModel.client_id = eventModel.data_client_id;
-  else if (eventModel._dcid) eventModel.client_id = eventModel._dcid;
-  else if (getCookieValues('_dcid') && getCookieValues('_dcid')[0])
-    eventModel.client_id = getCookieValues('_dcid')[0];
-  else if (data.generateClientId)
-    eventModel.client_id =
-      'dcid.1.' +
-      getTimestampMillis() +
-      '.' +
-      generateRandom(100000000, 999999999);
-
-  return eventModel;
-}
-
-function addBodyParametersToEventModel(eventModel) {
-  const body = getRequestBody();
-
-  if (body) {
-    const bodyJson = JSON.parse(body);
-
-    if (bodyJson) {
-      for (let bodyKey in bodyJson) {
-        eventModel[bodyKey] = bodyJson[bodyKey];
-      }
-    }
-  }
-
+function addClientIdToEventModel(eventModel, clientId) {
+  eventModel.client_id = clientId;
   return eventModel;
 }
 
@@ -460,24 +439,42 @@ function getCookieType(eventModel) {
   return 'None';
 }
 
-function prepareResponseBody(eventModel) {
+function prepareResponseBody(eventModels) {
   if (data.responseBody === 'empty') {
     return;
   }
 
+  const responseModel = isEventModelsWrappedInArray
+    ? eventModels[0]
+    : eventModels;
+
   setResponseHeader('Content-Type', 'application/json');
 
   if (data.responseBody === 'eventData') {
-    setResponseBody(JSON.stringify(eventModel));
+    setResponseBody(JSON.stringify(responseModel));
 
     return;
   }
 
+  if (isEventModelsWrappedInArray) {
+    setResponseBody(
+      JSON.stringify({
+        timestamp: responseModel.timestamp,
+        unique_event_id: responseModel.unique_event_id,
+      })
+    );
+    return;
+  }
+
   setResponseBody(
-    JSON.stringify({
-      timestamp: eventModel.timestamp,
-      unique_event_id: eventModel.unique_event_id,
-    })
+    JSON.stringify(
+      eventModels.map((eventModel) => {
+        return {
+          timestamp: eventModel.timestamp,
+          unique_event_id: eventModel.unique_event_id,
+        };
+      })
+    )
   );
 }
 
@@ -522,4 +519,73 @@ function setClientErrorResponseMessage() {
   if (data.clientErrorResponseMessage) {
     setResponseBody(data.clientErrorResponseMessage);
   }
+}
+
+function getEventModels(baseEventModel) {
+  const body = getRequestBody();
+
+  if (body) {
+    let bodyJson = JSON.parse(body);
+    if (bodyJson) {
+      const bodyType = getType(bodyJson);
+      const shouldUseOriginalBody =
+        data.acceptMultipleEvents && bodyType === 'array';
+      if (!shouldUseOriginalBody) {
+        bodyJson = [bodyJson];
+        isEventModelsWrappedInArray = true;
+      }
+
+      return bodyJson.map((bodyItem) => {
+        const eventModel = assign({}, baseEventModel, {
+          timestamp: makeInteger(getTimestampMillis() / 1000),
+          unique_event_id:
+            getTimestampMillis() + '_' + generateRandom(100000000, 999999999),
+        });
+        for (let bodyItemKey in bodyItem) {
+          eventModel[bodyItemKey] = bodyItem[bodyItemKey];
+        }
+        return eventModel;
+      });
+    }
+  }
+
+  return [
+    assign({}, baseEventModel, {
+      timestamp: makeInteger(getTimestampMillis() / 1000),
+      unique_event_id:
+        getTimestampMillis() + '_' + generateRandom(100000000, 999999999),
+    }),
+  ];
+}
+
+function getClientId(eventModels) {
+  for (let i = 0; i < eventModels.length; i++) {
+    const eventModel = eventModels[i];
+    const clientId =
+      eventModel.client_id || eventModel.data_client_id || eventModel._dcid;
+    if (clientId) return clientId;
+  }
+
+  const dcid = getCookieValues('_dcid');
+  if (dcid && dcid[0]) return dcid[0];
+
+  if (data.generateClientId) {
+    return (
+      'dcid.1.' +
+      getTimestampMillis() +
+      '.' +
+      generateRandom(100000000, 999999999)
+    );
+  }
+  return '';
+}
+
+function assign() {
+  const target = arguments[0];
+  for (let i = 1; i < arguments.length; i++) {
+    for (let key in arguments[i]) {
+      target[key] = arguments[i][key];
+    }
+  }
+  return target;
 }
