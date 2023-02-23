@@ -1,5 +1,7 @@
 homepage: "https://stape.io/"
 versions:
+  - sha: cb233b88ee98f576d2d27fa4c06234cecb66b268
+    changeNotes: Accept multiple events.
   - sha: 42a2c80254ef261b4c79e4414ff4525a239856af
     changeNotes: Allow to configure custom redirects.
   - sha: 448e609ee33eedbfaa2070d70eb23b8776f95fe3
