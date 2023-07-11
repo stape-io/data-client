@@ -948,6 +948,10 @@ ___SERVER_PERMISSIONS___
               {
                 "type": 1,
                 "string": "FPIDP"
+              },
+              {
+                "type": 1,
+                "string": "FPID"
               }
             ]
           }
