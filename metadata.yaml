@@ -1,5 +1,7 @@
 homepage: "https://stape.io/"
 versions:
+  - sha: 199507c3b10f3acb51c6ce307129792fb07d9700
+    changeNotes: Fix issue with rights.
   - sha: cb233b88ee98f576d2d27fa4c06234cecb66b268
     changeNotes: Accept multiple events.
   - sha: 42a2c80254ef261b4c79e4414ff4525a239856af
