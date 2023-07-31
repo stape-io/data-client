@@ -144,7 +144,11 @@ function addCommonParametersToEventModel(eventModel) {
       eventModel.page_referrer = eventModel.pageReferrer;
     else if (eventModel.referrer)
       eventModel.page_referrer = eventModel.referrer;
+    else if (eventModel.urlref)
+      eventModel.page_referrer = eventModel.urlref;
   }
+
+  if (!eventModel.value && eventModel.e_v) eventModel.value = eventModel.e_v;
 
   if (eventModel.items && eventModel.items[0]) {
     if (!eventModel.currency && eventModel.items[0].currency)
@@ -355,6 +359,7 @@ function addRequiredParametersToEventModel(eventModel) {
 
     if (eventModel.eventName) eventName = eventModel.eventName;
     else if (eventModel.event) eventName = eventModel.event;
+    else if (eventModel.e_n) eventName = eventModel.e_n;
 
     eventModel.event_name = eventName;
   }
