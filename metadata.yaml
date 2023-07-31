@@ -1,5 +1,7 @@
 homepage: "https://stape.io/"
 versions:
+  - sha: f6511e191159a89583452d7ff2e97700069cec1c
+    changeNotes: Add Matomo support.
   - sha: 199507c3b10f3acb51c6ce307129792fb07d9700
     changeNotes: Fix issue with rights.
   - sha: cb233b88ee98f576d2d27fa4c06234cecb66b268
