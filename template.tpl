@@ -572,7 +572,7 @@ function addCommonParametersToEventModel(eventModel) {
     userData.address = userAddressData;
   }
 
-  if (getObjectLength(userData) !== 0) {
+  if (!eventModel.user_data && getObjectLength(userData) !== 0) {
     eventModel.user_data = userData;
   }
 
