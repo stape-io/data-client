@@ -144,44 +144,35 @@ function addCommonParametersToEventModel(eventModel) {
       eventModel.page_referrer = eventModel.pageReferrer;
     else if (eventModel.referrer)
       eventModel.page_referrer = eventModel.referrer;
-    else if (eventModel.urlref)
-      eventModel.page_referrer = eventModel.urlref;
+    else if (eventModel.urlref) eventModel.page_referrer = eventModel.urlref;
   }
 
   if (!eventModel.value && eventModel.e_v) eventModel.value = eventModel.e_v;
 
-  if (eventModel.items && eventModel.items[0]) {
-    if (!eventModel.currency && eventModel.items[0].currency)
-      eventModel.currency = eventModel.items[0].currency;
-
-    if (!eventModel.items[1]) {
-      if (!eventModel.item_id && eventModel.items[0].item_id)
-        eventModel.item_id = eventModel.items[0].item_id;
-      if (!eventModel.item_name && eventModel.items[0].item_name)
-        eventModel.item_name = eventModel.items[0].item_name;
-      if (!eventModel.item_brand && eventModel.items[0].item_brand)
-        eventModel.item_brand = eventModel.items[0].item_brand;
-      if (!eventModel.item_quantity && eventModel.items[0].quantity)
-        eventModel.item_quantity = eventModel.items[0].quantity;
-      if (!eventModel.item_category && eventModel.items[0].item_category)
-        eventModel.item_category = eventModel.items[0].item_category;
-
-      if (eventModel.items[0].price) {
-        if (!eventModel.item_price)
-          eventModel.item_price = eventModel.items[0].price;
-        if (!eventModel.value)
-          eventModel.value = eventModel.items[0].quantity
-            ? eventModel.items[0].quantity * eventModel.items[0].price
-            : eventModel.items[0].price;
-      }
-    } else if (!eventModel.value) {
-      let valueFromItems = 0;
-
-      eventModel.items.forEach((d) => {
-        if (d.price)
-          valueFromItems += d.quantity ? d.quantity * d.price : d.price;
-      });
-
+  if (getType(eventModel.items) === 'array' && eventModel.items.length) {
+    const firstItem = eventModel.items[0];
+    if (!eventModel.currency && firstItem.currency)
+      eventModel.currency = firstItem.currency;
+    if (eventModel.items.length === 1) {
+      if (!eventModel.item_id && firstItem.item_id)
+        eventModel.item_id = firstItem.item_id;
+      if (!eventModel.item_name && firstItem.item_name)
+        eventModel.item_name = firstItem.item_name;
+      if (!eventModel.item_brand && firstItem.item_brand)
+        eventModel.item_brand = firstItem.item_brand;
+      if (!eventModel.item_quantity && firstItem.quantity)
+        eventModel.item_quantity = firstItem.quantity;
+      if (!eventModel.item_category && firstItem.item_category)
+        eventModel.item_category = firstItem.item_category;
+      if (!eventModel.item_price && firstItem.price)
+        eventModel.item_price = firstItem.price;
+    }
+    if (!eventModel.value) {
+      const valueFromItems = eventModel.items.reduce((acc, item) => {
+        if (!item.price) return acc;
+        const quantity = item.quantity ? item.quantity : 1;
+        return acc + quantity * item.price;
+      }, 0);
       if (valueFromItems) eventModel.value = valueFromItems;
     }
   }
