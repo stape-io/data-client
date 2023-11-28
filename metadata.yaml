@@ -1,5 +1,7 @@
 homepage: "https://stape.io/"
 versions:
+  - sha: 905af50fe8eb5f61e58a6d04c33fd6faf01e7f98
+    changeNotes: user_data persistence fix.
   - sha: e11b7b68f8160fd6cc6d210daef907e25b4670cf
     changeNotes: Fix issue with gAds user data.
   - sha: f6511e191159a89583452d7ff2e97700069cec1c
