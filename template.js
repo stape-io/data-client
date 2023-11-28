@@ -95,12 +95,6 @@ function runClient() {
 }
 
 function addCommonParametersToEventModel(eventModel) {
-  let userData = {};
-  let userAddressData = {};
-
-  if (eventModel.user_data) userData = eventModel.user_data;
-  if (userData.address) userAddressData = userData.address;
-
   if (!eventModel.ip_override) {
     if (eventModel.ip) eventModel.ip_override = eventModel.ip;
     else if (eventModel.ipOverride)
@@ -207,24 +201,6 @@ function addCommonParametersToEventModel(eventModel) {
     }
   }
 
-  if (!userData.email_address) {
-    if (eventModel.userEmail) userData.email_address = eventModel.userEmail;
-    else if (eventModel.email_address)
-      userData.email_address = eventModel.email_address;
-    else if (eventModel.email) userData.email_address = eventModel.email;
-    else if (eventModel.mail) userData.email_address = eventModel.mail;
-  }
-
-  if (!userData.phone_number) {
-    if (eventModel.userPhoneNumber)
-      userData.phone_number = eventModel.userPhoneNumber;
-    else if (eventModel.phone_number)
-      userData.phone_number = eventModel.phone_number;
-    else if (eventModel.phoneNumber)
-      userData.phone_number = eventModel.phoneNumber;
-    else if (eventModel.phone) userData.phone_number = eventModel.phone;
-  }
-
   if (!eventModel.page_encoding && eventModel.pageEncoding)
     eventModel.page_encoding = eventModel.pageEncoding;
   if (!eventModel.page_path && eventModel.pagePath)
@@ -246,49 +222,73 @@ function addCommonParametersToEventModel(eventModel) {
   if (!userAddressData.country && eventModel.country)
     userAddressData.country = eventModel.country;
 
-  if (!userAddressData.first_name) {
-    if (eventModel.userFirstName)
-      userAddressData.first_name = eventModel.userFirstName;
-    else if (eventModel.first_name)
-      userAddressData.first_name = eventModel.first_name;
-    else if (eventModel.firstName)
-      userAddressData.first_name = eventModel.firstName;
-    else if (eventModel.name) userAddressData.first_name = eventModel.name;
-  }
+  if (!eventModel.user_data) {
+    let userData = {};
+    let userAddressData = {};
 
-  if (!userAddressData.last_name) {
-    if (eventModel.userLastName)
-      userAddressData.last_name = eventModel.userLastName;
-    else if (eventModel.last_name)
-      userAddressData.last_name = eventModel.last_name;
-    else if (eventModel.lastName)
-      userAddressData.last_name = eventModel.lastName;
-    else if (eventModel.surname) userAddressData.last_name = eventModel.surname;
-    else if (eventModel.family_name)
-      userAddressData.last_name = eventModel.family_name;
-    else if (eventModel.familyName)
-      userAddressData.last_name = eventModel.familyName;
-  }
+    if (!userData.email_address) {
+      if (eventModel.userEmail) userData.email_address = eventModel.userEmail;
+      else if (eventModel.email_address)
+        userData.email_address = eventModel.email_address;
+      else if (eventModel.email) userData.email_address = eventModel.email;
+      else if (eventModel.mail) userData.email_address = eventModel.mail;
+    }
 
-  if (!userAddressData.region) {
-    if (eventModel.region) userAddressData.region = eventModel.region;
-    else if (eventModel.state) userAddressData.region = eventModel.state;
-  }
+    if (!userData.phone_number) {
+      if (eventModel.userPhoneNumber)
+        userData.phone_number = eventModel.userPhoneNumber;
+      else if (eventModel.phone_number)
+        userData.phone_number = eventModel.phone_number;
+      else if (eventModel.phoneNumber)
+        userData.phone_number = eventModel.phoneNumber;
+      else if (eventModel.phone) userData.phone_number = eventModel.phone;
+    }
 
-  if (!userAddressData.postal_code) {
-    if (eventModel.postal_code)
-      userAddressData.postal_code = eventModel.postal_code;
-    else if (eventModel.postalCode)
-      userAddressData.postal_code = eventModel.postalCode;
-    else if (eventModel.zip) userAddressData.postal_code = eventModel.zip;
-  }
+    if (!userAddressData.first_name) {
+      if (eventModel.userFirstName)
+        userAddressData.first_name = eventModel.userFirstName;
+      else if (eventModel.first_name)
+        userAddressData.first_name = eventModel.first_name;
+      else if (eventModel.firstName)
+        userAddressData.first_name = eventModel.firstName;
+      else if (eventModel.name) userAddressData.first_name = eventModel.name;
+    }
 
-  if (getObjectLength(userAddressData) !== 0) {
-    userData.address = userAddressData;
-  }
+    if (!userAddressData.last_name) {
+      if (eventModel.userLastName)
+        userAddressData.last_name = eventModel.userLastName;
+      else if (eventModel.last_name)
+        userAddressData.last_name = eventModel.last_name;
+      else if (eventModel.lastName)
+        userAddressData.last_name = eventModel.lastName;
+      else if (eventModel.surname)
+        userAddressData.last_name = eventModel.surname;
+      else if (eventModel.family_name)
+        userAddressData.last_name = eventModel.family_name;
+      else if (eventModel.familyName)
+        userAddressData.last_name = eventModel.familyName;
+    }
 
-  if (!eventModel.user_data && getObjectLength(userData) !== 0) {
-    eventModel.user_data = userData;
+    if (!userAddressData.region) {
+      if (eventModel.region) userAddressData.region = eventModel.region;
+      else if (eventModel.state) userAddressData.region = eventModel.state;
+    }
+
+    if (!userAddressData.postal_code) {
+      if (eventModel.postal_code)
+        userAddressData.postal_code = eventModel.postal_code;
+      else if (eventModel.postalCode)
+        userAddressData.postal_code = eventModel.postalCode;
+      else if (eventModel.zip) userAddressData.postal_code = eventModel.zip;
+    }
+
+    if (getObjectLength(userAddressData) !== 0) {
+      userData.address = userAddressData;
+    }
+
+    if (!eventModel.user_data && getObjectLength(userData) !== 0) {
+      eventModel.user_data = userData;
+    }
   }
 
   return eventModel;
