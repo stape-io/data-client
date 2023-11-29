@@ -213,14 +213,6 @@ function addCommonParametersToEventModel(eventModel) {
     eventModel.viewport_size = eventModel.viewportSize;
   if (!eventModel.user_id && eventModel.userId)
     eventModel.user_id = eventModel.userId;
-  if (!userAddressData.street && eventModel.street)
-    userAddressData.street = eventModel.street;
-  if (!userAddressData.city && eventModel.city)
-    userAddressData.city = eventModel.city;
-  if (!userAddressData.region && eventModel.region)
-    userAddressData.region = eventModel.region;
-  if (!userAddressData.country && eventModel.country)
-    userAddressData.country = eventModel.country;
 
   if (!eventModel.user_data) {
     let userData = {};
@@ -243,6 +235,15 @@ function addCommonParametersToEventModel(eventModel) {
         userData.phone_number = eventModel.phoneNumber;
       else if (eventModel.phone) userData.phone_number = eventModel.phone;
     }
+
+    if (!userAddressData.street && eventModel.street)
+      userAddressData.street = eventModel.street;
+    if (!userAddressData.city && eventModel.city)
+      userAddressData.city = eventModel.city;
+    if (!userAddressData.region && eventModel.region)
+      userAddressData.region = eventModel.region;
+    if (!userAddressData.country && eventModel.country)
+      userAddressData.country = eventModel.country;
 
     if (!userAddressData.first_name) {
       if (eventModel.userFirstName)
