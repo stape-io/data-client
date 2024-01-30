@@ -297,6 +297,9 @@ const computeEffectiveTldPlusOne = require('computeEffectiveTldPlusOne');
 const getRequestQueryParameter = require('getRequestQueryParameter');
 const getType = require('getType');
 const Promise = require('Promise');
+const decodeUriComponent = require('decodeUriComponent');
+const createRegex = require('createRegex');
+const makeString = require('makeString');
 
 const requestMethod = getRequestMethod();
 const path = getRequestPath();
@@ -798,7 +801,11 @@ function getEventModels(baseEventModel) {
   const body = getRequestBody();
 
   if (body) {
-    let bodyJson = JSON.parse(body);
+    const contentType = getRequestHeader('content-type');
+    const isFormUrlEncoded =
+      !!contentType &&
+      contentType.indexOf('application/x-www-form-urlencoded') !== -1;
+    let bodyJson = isFormUrlEncoded ? parseUrlEncoded(body) : JSON.parse(body);
     if (bodyJson) {
       const bodyType = getType(bodyJson);
       const shouldUseOriginalBody =
@@ -861,6 +868,46 @@ function assign() {
     }
   }
   return target;
+}
+
+function parseUrlEncoded(data) {
+  const pairs = data.split('&');
+  const parsedData = {};
+  const regex = createRegex('\\+', 'g');
+  for (const pair of pairs) {
+    const pairValue = pair.split('=');
+    const key = pairValue[0];
+    const value = pairValue[1];
+    const keys = key
+      .split('.')
+      .map((k) => decodeUriComponent(k.replace(regex, ' ')));
+
+    let currentObject = parsedData;
+
+    for (let i = 0; i < keys.length - 1; i++) {
+      const currentKey = keys[i];
+
+      if (!currentObject[currentKey]) {
+        const nextKey = keys[i + 1];
+        const nextKeyIsNumber = makeString(makeInteger(nextKey)) === nextKey;
+        currentObject[currentKey] = nextKeyIsNumber ? [] : {};
+      }
+
+      currentObject = currentObject[currentKey];
+    }
+
+    const lastKey = keys[keys.length - 1];
+    const decodedValue = decodeUriComponent(value.replace(regex, ' '));
+    const parsedValue = JSON.parse(decodedValue) || decodedValue;
+
+    if (getType(currentObject) === 'array') {
+      currentObject.push(parsedValue);
+    } else {
+      currentObject[lastKey] = parsedValue;
+    }
+  }
+
+  return parsedData;
 }
 
 
@@ -1163,7 +1210,10 @@ ___SERVER_PERMISSIONS___
 
 ___TESTS___
 
-scenarios: []
+scenarios:
+- name: Quick Test
+  code: runCode();
+setup: ''
 
 
 ___NOTES___

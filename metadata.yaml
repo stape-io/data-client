@@ -1,5 +1,7 @@
 homepage: "https://stape.io/"
 versions:
+  - sha: e31d2f39c10285cbc5169e349c473f73e4668692
+    changeNotes: Added support for x-www-form-urlencoded.
   - sha: 4d9f4d4fbded5414cb091efac70224d31c522e5c
     changeNotes: Fix user address data.
   - sha: 905af50fe8eb5f61e58a6d04c33fd6faf01e7f98
