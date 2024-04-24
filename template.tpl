@@ -688,7 +688,7 @@ function setResponseHeaders(statusCode) {
   );
   setResponseHeader(
     'Access-Control-Allow-Headers',
-    'content-type,set-cookie,x-robots-tag,x-gtm-server-preview,x-stape-preview'
+    'content-type,set-cookie,x-robots-tag,x-gtm-server-preview,x-stape-preview,x-gtm-as'
   );
   setResponseHeader('Access-Control-Allow-Credentials', 'true');
   setResponseStatus(statusCode);
