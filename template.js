@@ -24,6 +24,7 @@ const Promise = require('Promise');
 const decodeUriComponent = require('decodeUriComponent');
 const createRegex = require('createRegex');
 const makeString = require('makeString');
+const sha256Sync = require('sha256Sync');
 
 const requestMethod = getRequestMethod();
 const path = getRequestPath();
@@ -387,7 +388,7 @@ function storeClientId(eventModel) {
       samesite: getCookieType(eventModel),
       secure: true,
       'max-age': 63072000, // 2 years
-      httpOnly: false,
+      httpOnly: true,
     });
   }
 }
@@ -578,7 +579,7 @@ function getClientId(eventModels) {
       'dcid.1.' +
       getTimestampMillis() +
       '.' +
-      generateRandom(100000000, 999999999)
+      sha256Sync(makeString(generateRandom(100000000, 999999999)))
     );
   }
   return '';
