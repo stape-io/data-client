@@ -46,6 +46,14 @@ ___TEMPLATE_PARAMETERS___
   },
   {
     "type": "CHECKBOX",
+    "name": "httpOnlyCookie",
+    "checkboxText": "Write the _dcid cookie as HttpOnly",
+    "simpleValueType": true,
+    "help": "If enabled, the _dcid cookie will be written with the HttpOnly flag, making it non-accsessible by javascript.",
+    "defaultValue": false
+  },
+  {
+    "type": "CHECKBOX",
     "name": "generateClientId",
     "checkboxText": "Always generate client_id parameter",
     "simpleValueType": true,
@@ -671,7 +679,7 @@ function storeClientId(eventModel) {
       samesite: getCookieType(eventModel),
       secure: true,
       'max-age': 63072000, // 2 years
-      httpOnly: data.httpOnlyCookie,
+      httpOnly: false,
     });
   }
 }
