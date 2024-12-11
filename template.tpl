@@ -41,7 +41,7 @@ ___TEMPLATE_PARAMETERS___
     "name": "httpOnlyCookie",
     "checkboxText": "Write the _dcid cookie as HttpOnly",
     "simpleValueType": true,
-    "help": "If enabled, the _dcid cookie will be written with the HttpOnly flag, making it non-accsessible by javascript."
+    "help": "If enabled, the _dcid cookie will be written with the HttpOnly flag, making it non-accsessible by javascript.",
     "defaultValue": false
   },
   {
@@ -646,16 +646,20 @@ function addRequiredParametersToEventModel(eventModel) {
   return eventModel;
 }
 
-function storeClientId(eventModel) {
-  if (data.generateClientId) {
-    setCookie('_dcid', eventModel.client_id, {
-      domain: 'auto',
-      path: '/',
-      samesite: getCookieType(eventModel),
-      secure: true,
-      'max-age': 63072000, // 2 years
-      httpOnly: data.httpOnlyCookie,
-    });
+function exposeFPIDCookie(eventModel) {
+  if (data.exposeFPIDCookie) {
+    let fpid = getCookieValues('FPID');
+
+    if (fpid.length) {
+      setCookie('FPIDP', fpid[0], {
+        domain: 'auto',
+        path: '/',
+        samesite: getCookieType(eventModel),
+        secure: true,
+        'max-age': 63072000, // 2 years
+        httpOnly: false,
+      });
+    }
   }
 }
 
@@ -667,7 +671,7 @@ function storeClientId(eventModel) {
       samesite: getCookieType(eventModel),
       secure: true,
       'max-age': 63072000, // 2 years
-      httpOnly: false,
+      httpOnly: data.httpOnlyCookie,
     });
   }
 }
