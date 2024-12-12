@@ -387,7 +387,7 @@ function storeClientId(eventModel) {
       samesite: getCookieType(eventModel),
       secure: true,
       'max-age': 63072000, // 2 years
-      httpOnly: data.httpOnlyCookie,
+      httpOnly: data.httpOnlyCookie || false,
     });
   }
 }
