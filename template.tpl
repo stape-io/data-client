@@ -331,7 +331,7 @@ function runClient() {
   require('claimRequest')();
 
   if (requestMethod === 'OPTIONS') {
-    setResponseHeaders(200);
+    setCommonResponseHeaders(200);
     returnResponse();
     return;
   }
@@ -349,7 +349,7 @@ function runClient() {
   exposeFPIDCookie(eventModels[0]);
   prolongDataTagCookies(eventModels[0]);
   const responseStatusCode = makeInteger(data.responseStatusCode);
-  setResponseHeaders(responseStatusCode);
+  setCommonResponseHeaders(responseStatusCode);
 
   Promise.all(
     eventModels.map((eventModel) => {
@@ -687,7 +687,7 @@ function getObjectLength(object) {
   return length;
 }
 
-function setResponseHeaders(statusCode) {
+function setCommonResponseHeaders(statusCode) {
   setResponseHeader('Access-Control-Max-Age', '600');
   setResponseHeader('Access-Control-Allow-Origin', getRequestHeader('origin'));
   setResponseHeader(
@@ -789,14 +789,13 @@ function getEcommerceAction(eventModel) {
 
 function setRedirectLocation() {
   let location = data.redirectTo;
-
   if (data.lookupForRedirectToParam && data.redirectToQueryParamName) {
     const param = getRequestQueryParameter(data.redirectToQueryParamName);
     if (param && param.startsWith('http')) {
       location = param;
     }
   }
-  setResponseHeaders('location', location);
+  setResponseHeader('location', location);
 }
 
 function setClientErrorResponseMessage() {
@@ -1227,5 +1226,4 @@ setup: ''
 ___NOTES___
 
 Created on 21/03/2021, 11:24:30
-
 

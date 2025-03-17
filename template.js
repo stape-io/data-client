@@ -47,7 +47,7 @@ function runClient() {
   require('claimRequest')();
 
   if (requestMethod === 'OPTIONS') {
-    setResponseHeaders(200);
+    setCommonResponseHeaders(200);
     returnResponse();
     return;
   }
@@ -65,7 +65,7 @@ function runClient() {
   exposeFPIDCookie(eventModels[0]);
   prolongDataTagCookies(eventModels[0]);
   const responseStatusCode = makeInteger(data.responseStatusCode);
-  setResponseHeaders(responseStatusCode);
+  setCommonResponseHeaders(responseStatusCode);
 
   Promise.all(
     eventModels.map((eventModel) => {
@@ -387,7 +387,7 @@ function storeClientId(eventModel) {
       samesite: getCookieType(eventModel),
       secure: true,
       'max-age': 63072000, // 2 years
-      httpOnly: data.httpOnlyCookie || false,
+      httpOnly: data.httpOnlyCookie || false
     });
   }
 }
@@ -403,7 +403,7 @@ function getObjectLength(object) {
   return length;
 }
 
-function setResponseHeaders(statusCode) {
+function setCommonResponseHeaders(statusCode) {
   setResponseHeader('Access-Control-Max-Age', '600');
   setResponseHeader('Access-Control-Allow-Origin', getRequestHeader('origin'));
   setResponseHeader(
@@ -505,14 +505,13 @@ function getEcommerceAction(eventModel) {
 
 function setRedirectLocation() {
   let location = data.redirectTo;
-
   if (data.lookupForRedirectToParam && data.redirectToQueryParamName) {
     const param = getRequestQueryParameter(data.redirectToQueryParamName);
     if (param && param.startsWith('http')) {
       location = param;
     }
   }
-  setResponseHeaders('location', location);
+  setResponseHeader('location', location);
 }
 
 function setClientErrorResponseMessage() {
