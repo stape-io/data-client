@@ -626,7 +626,7 @@ function prolongDataTagCookies(eventModel) {
         samesite: getCookieType(eventModel),
         secure: true,
         'max-age': 63072000, // 2 years
-        httpOnly: false,
+        httpOnly: false
       });
     }
   }
@@ -657,7 +657,7 @@ function exposeFPIDCookie(eventModel) {
         samesite: getCookieType(eventModel),
         secure: true,
         'max-age': 63072000, // 2 years
-        httpOnly: false,
+        httpOnly: false
       });
     }
   }
@@ -744,7 +744,7 @@ function prepareResponseBody(eventModels) {
     setResponseBody(
       JSON.stringify({
         timestamp: responseModel.timestamp,
-        unique_event_id: responseModel.unique_event_id,
+        unique_event_id: responseModel.unique_event_id
       })
     );
     return;
@@ -755,7 +755,7 @@ function prepareResponseBody(eventModels) {
       eventModels.map((eventModel) => {
         return {
           timestamp: eventModel.timestamp,
-          unique_event_id: eventModel.unique_event_id,
+          unique_event_id: eventModel.unique_event_id
         };
       })
     )
@@ -772,7 +772,7 @@ function getEcommerceAction(eventModel) {
       'checkout',
       'checkout_option',
       'purchase',
-      'refund',
+      'refund'
     ];
 
     for (let index = 0; index < actions.length; ++index) {
@@ -826,7 +826,7 @@ function getEventModels(baseEventModel) {
         const eventModel = assign({}, baseEventModel, {
           timestamp: makeInteger(getTimestampMillis() / 1000),
           unique_event_id:
-            getTimestampMillis() + '_' + generateRandom(100000000, 999999999),
+            getTimestampMillis() + '_' + generateRandom(100000000, 999999999)
         });
         for (let bodyItemKey in bodyItem) {
           eventModel[bodyItemKey] = bodyItem[bodyItemKey];
@@ -840,8 +840,8 @@ function getEventModels(baseEventModel) {
     assign({}, baseEventModel, {
       timestamp: makeInteger(getTimestampMillis() / 1000),
       unique_event_id:
-        getTimestampMillis() + '_' + generateRandom(100000000, 999999999),
-    }),
+        getTimestampMillis() + '_' + generateRandom(100000000, 999999999)
+    })
   ];
 }
 
