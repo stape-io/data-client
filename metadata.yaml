@@ -1,5 +1,7 @@
 homepage: "https://stape.io/"
 versions:
+  - sha: bcc2b5079ff0bad4fbe36276c8652fe3209f288d
+    changeNotes: Fixed location response header bug.
   - sha: e31d2f39c10285cbc5169e349c473f73e4668692
     changeNotes: Added support for x-www-form-urlencoded.
   - sha: 4d9f4d4fbded5414cb091efac70224d31c522e5c
