@@ -331,7 +331,7 @@ function runClient() {
   require('claimRequest')();
 
   if (requestMethod === 'OPTIONS') {
-    setResponseHeaders(200);
+    setCommonResponseHeaders(200);
     returnResponse();
     return;
   }
@@ -349,7 +349,7 @@ function runClient() {
   exposeFPIDCookie(eventModels[0]);
   prolongDataTagCookies(eventModels[0]);
   const responseStatusCode = makeInteger(data.responseStatusCode);
-  setResponseHeaders(responseStatusCode);
+  setCommonResponseHeaders(responseStatusCode);
 
   Promise.all(
     eventModels.map((eventModel) => {
@@ -626,7 +626,7 @@ function prolongDataTagCookies(eventModel) {
         samesite: getCookieType(eventModel),
         secure: true,
         'max-age': 63072000, // 2 years
-        httpOnly: false,
+        httpOnly: false
       });
     }
   }
@@ -657,7 +657,7 @@ function exposeFPIDCookie(eventModel) {
         samesite: getCookieType(eventModel),
         secure: true,
         'max-age': 63072000, // 2 years
-        httpOnly: false,
+        httpOnly: false
       });
     }
   }
@@ -687,7 +687,7 @@ function getObjectLength(object) {
   return length;
 }
 
-function setResponseHeaders(statusCode) {
+function setCommonResponseHeaders(statusCode) {
   setResponseHeader('Access-Control-Max-Age', '600');
   setResponseHeader('Access-Control-Allow-Origin', getRequestHeader('origin'));
   setResponseHeader(
@@ -744,7 +744,7 @@ function prepareResponseBody(eventModels) {
     setResponseBody(
       JSON.stringify({
         timestamp: responseModel.timestamp,
-        unique_event_id: responseModel.unique_event_id,
+        unique_event_id: responseModel.unique_event_id
       })
     );
     return;
@@ -755,7 +755,7 @@ function prepareResponseBody(eventModels) {
       eventModels.map((eventModel) => {
         return {
           timestamp: eventModel.timestamp,
-          unique_event_id: eventModel.unique_event_id,
+          unique_event_id: eventModel.unique_event_id
         };
       })
     )
@@ -772,7 +772,7 @@ function getEcommerceAction(eventModel) {
       'checkout',
       'checkout_option',
       'purchase',
-      'refund',
+      'refund'
     ];
 
     for (let index = 0; index < actions.length; ++index) {
@@ -789,14 +789,13 @@ function getEcommerceAction(eventModel) {
 
 function setRedirectLocation() {
   let location = data.redirectTo;
-
   if (data.lookupForRedirectToParam && data.redirectToQueryParamName) {
     const param = getRequestQueryParameter(data.redirectToQueryParamName);
     if (param && param.startsWith('http')) {
       location = param;
     }
   }
-  setResponseHeaders('location', location);
+  setResponseHeader('location', location);
 }
 
 function setClientErrorResponseMessage() {
@@ -827,7 +826,7 @@ function getEventModels(baseEventModel) {
         const eventModel = assign({}, baseEventModel, {
           timestamp: makeInteger(getTimestampMillis() / 1000),
           unique_event_id:
-            getTimestampMillis() + '_' + generateRandom(100000000, 999999999),
+            getTimestampMillis() + '_' + generateRandom(100000000, 999999999)
         });
         for (let bodyItemKey in bodyItem) {
           eventModel[bodyItemKey] = bodyItem[bodyItemKey];
@@ -841,8 +840,8 @@ function getEventModels(baseEventModel) {
     assign({}, baseEventModel, {
       timestamp: makeInteger(getTimestampMillis() / 1000),
       unique_event_id:
-        getTimestampMillis() + '_' + generateRandom(100000000, 999999999),
-    }),
+        getTimestampMillis() + '_' + generateRandom(100000000, 999999999)
+    })
   ];
 }
 
@@ -1227,5 +1226,4 @@ setup: ''
 ___NOTES___
 
 Created on 21/03/2021, 11:24:30
-
 
