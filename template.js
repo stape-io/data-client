@@ -539,11 +539,14 @@ function getEventModels(baseEventModel) {
       }
 
       return bodyJson.map((bodyItem) => {
-        const eventModel = assign({}, baseEventModel, {
-          timestamp: makeInteger(getTimestampMillis() / 1000),
-          unique_event_id:
-            getTimestampMillis() + '_' + generateRandom(100000000, 999999999)
-        });
+        const eventModel = assign(
+          {
+            timestamp: makeInteger(getTimestampMillis() / 1000),
+            unique_event_id:
+              getTimestampMillis() + '_' + generateRandom(100000000, 999999999)
+          },
+          baseEventModel
+        );
         for (let bodyItemKey in bodyItem) {
           eventModel[bodyItemKey] = bodyItem[bodyItemKey];
         }
@@ -553,11 +556,14 @@ function getEventModels(baseEventModel) {
   }
 
   return [
-    assign({}, baseEventModel, {
-      timestamp: makeInteger(getTimestampMillis() / 1000),
-      unique_event_id:
-        getTimestampMillis() + '_' + generateRandom(100000000, 999999999)
-    })
+    assign(
+      {
+        timestamp: makeInteger(getTimestampMillis() / 1000),
+        unique_event_id:
+          getTimestampMillis() + '_' + generateRandom(100000000, 999999999)
+      },
+      baseEventModel
+    )
   ];
 }
 
