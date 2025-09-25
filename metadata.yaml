@@ -1,5 +1,8 @@
-homepage: "https://stape.io/"
+homepage: 'https://stape.io/'
+documentation: 'https://github.com/stape-io/data-client'
 versions:
+  - sha: 2cd52aa8ece4014cb0d02674c0ef6d40ee479554
+    changeNotes: Add x-stape-app-version to Access-Control-Allow-Headers headers.
   - sha: 953bf24c77b68e708fee1e953eea31303bf1fde1
     changeNotes: Fix for timestamp and unique_event_id override.
   - sha: a9fb729fd9eed2013188c00e820fa81aa78e71c1

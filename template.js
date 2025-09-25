@@ -25,6 +25,9 @@ const decodeUriComponent = require('decodeUriComponent');
 const createRegex = require('createRegex');
 const makeString = require('makeString');
 
+/*==============================================================================
+==============================================================================*/
+
 const requestMethod = getRequestMethod();
 const path = getRequestPath();
 let isClientUsed = false;
@@ -41,6 +44,10 @@ if (data.path && !isClientUsed) {
     }
   }
 }
+
+/*==============================================================================
+  Vendor related functions
+==============================================================================*/
 
 function runClient() {
   isClientUsed = true;
@@ -392,17 +399,6 @@ function storeClientId(eventModel) {
   }
 }
 
-function getObjectLength(object) {
-  let length = 0;
-
-  for (let key in object) {
-    if (object.hasOwnProperty(key)) {
-      ++length;
-    }
-  }
-  return length;
-}
-
 function setCommonResponseHeaders(statusCode) {
   setResponseHeader('Access-Control-Max-Age', '600');
   setResponseHeader('Access-Control-Allow-Origin', getRequestHeader('origin'));
@@ -412,7 +408,7 @@ function setCommonResponseHeaders(statusCode) {
   );
   setResponseHeader(
     'Access-Control-Allow-Headers',
-    'content-type,set-cookie,x-robots-tag,x-gtm-server-preview,x-stape-preview'
+    'content-type,set-cookie,x-robots-tag,x-gtm-server-preview,x-stape-preview,x-stape-app-version'
   );
   setResponseHeader('Access-Control-Allow-Credentials', 'true');
   setResponseStatus(statusCode);
@@ -587,6 +583,21 @@ function getClientId(eventModels) {
     );
   }
   return '';
+}
+
+/*==============================================================================
+  Helpers
+==============================================================================*/
+
+function getObjectLength(object) {
+  let length = 0;
+
+  for (let key in object) {
+    if (object.hasOwnProperty(key)) {
+      ++length;
+    }
+  }
+  return length;
 }
 
 function assign() {
