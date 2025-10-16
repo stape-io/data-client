@@ -20,7 +20,6 @@ const generateRandom = require('generateRandom');
 const computeEffectiveTldPlusOne = require('computeEffectiveTldPlusOne');
 const getRequestQueryParameter = require('getRequestQueryParameter');
 const getType = require('getType');
-const Promise = require('Promise');
 const decodeUriComponent = require('decodeUriComponent');
 const createRegex = require('createRegex');
 const makeString = require('makeString');
@@ -71,36 +70,35 @@ function runClient() {
   storeClientId(eventModels[0]);
   exposeFPIDCookie(eventModels[0]);
   prolongDataTagCookies(eventModels[0]);
-  const responseStatusCode = makeInteger(data.responseStatusCode);
+  const responseStatusCode = makeInteger(data.responseStatusCode || 200);
   setCommonResponseHeaders(responseStatusCode);
 
-  Promise.all(
-    eventModels.map((eventModel) => {
-      return Promise.create((resolve) => {
-        runContainer(eventModel, resolve);
-      });
-    })
-  ).then(() => {
-    switch (responseStatusCode) {
-      case 200:
-      case 201:
-        if (requestMethod === 'POST' || data.responseBodyGet) {
-          prepareResponseBody(eventModels);
-        } else {
-          setPixelResponse();
+  let counter = 0;
+  eventModels.forEach((event) => {
+    runContainer(event, () => {
+      if (++counter === eventModels.length) {
+        switch (responseStatusCode) {
+          case 200:
+          case 201:
+            if (requestMethod === 'POST' || data.responseBodyGet) {
+              prepareResponseBody(eventModels);
+            } else {
+              setPixelResponse();
+            }
+            break;
+          case 301:
+          case 302:
+            setRedirectLocation();
+            break;
+          case 403:
+          case 404:
+            setClientErrorResponseMessage();
+            break;
         }
-        break;
-      case 301:
-      case 302:
-        setRedirectLocation();
-        break;
-      case 403:
-      case 404:
-        setClientErrorResponseMessage();
-        break;
-    }
 
-    returnResponse();
+        returnResponse();
+      }
+    });
   });
 }
 
