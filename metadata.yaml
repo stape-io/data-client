@@ -1,6 +1,10 @@
 homepage: 'https://stape.io/'
 documentation: 'https://github.com/stape-io/data-client'
 versions:
+  - sha: 3992d61eb8bc9f0314e9501ed6f6a86fd1671e8a
+    changeNotes: |2
+      Fix the return status when there is no default value to be returned.
+      Fix the event when processing the container takes more than 5 seconds to run the event.
   - sha: 2cd52aa8ece4014cb0d02674c0ef6d40ee479554
     changeNotes: Add x-stape-app-version to Access-Control-Allow-Headers headers.
   - sha: 953bf24c77b68e708fee1e953eea31303bf1fde1
