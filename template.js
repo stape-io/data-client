@@ -74,7 +74,7 @@ function runClient() {
   setCommonResponseHeaders(responseStatusCode);
   setBootstrapCookie(eventModels[0]);
 
-  if(eventModels[0].event_name === 'bootstrap)') {
+  if(eventModels[0].event_name === 'bootstrap') {
     setCommonResponseHeaders(204);
     returnResponse();
     data.gtmOnSuccess();
