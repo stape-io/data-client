@@ -50,22 +50,28 @@ if (data.path && !isClientUsed) {
 
 function runClient() {
   isClientUsed = true;
-  require('claimRequest')();
 
   if (requestMethod === 'OPTIONS') {
+    require('claimRequest')();
     setCommonResponseHeaders(200);
     returnResponse();
     return;
   }
+
+  const eventNameParam = getRequestQueryParameter('event_name');
+  if(eventNameParam === 'bootstrap') {
+    const existingDcid = getCookieValues('_dcid');
+    if(existingDcid && existingDcid.length) {
+      setResponseHeaders(204);
+      returnResponse();
+      return;
+    }
+  }
+
+  require('claimRequest')();
+  
   const baseEventModel = getBaseEventModelWithQueryParameters();
   let eventModels = getEventModels(baseEventModel);
-
-  const existingDcid = getCookieValues('_dcid');
-  if (eventModels[0] && eventModels[0].event_name === 'bootstrap' && existingDcid && existingDcid.length) {
-    setResponseHeaders(204);
-    returnResponse();
-    return;
-  }
   
   const clientId = getClientId(eventModels);
   eventModels = eventModels.map((eventModel) => {
