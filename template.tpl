@@ -1018,6 +1018,10 @@ ___SERVER_PERMISSIONS___
               {
                 "type": 1,
                 "string": "FPID"
+              },
+              {
+                "type": 1,
+                "string": "_bootstrap_cid"
               }
             ]
           }
@@ -1198,6 +1202,28 @@ ___SERVER_PERMISSIONS___
                   {
                     "type": 1,
                     "string": "FPIDP"
+                  },
+                  {
+                    "type": 1,
+                    "string": "*"
+                  },
+                  {
+                    "type": 1,
+                    "string": "*"
+                  },
+                  {
+                    "type": 1,
+                    "string": "any"
+                  },
+                  {
+                    "type": 1,
+                    "string": "any"
+                  }
+                ],
+                "mapValue": [
+                  {
+                    "type": 1,
+                    "string": "_bootstrap_cid"
                   },
                   {
                     "type": 1,
