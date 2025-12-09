@@ -72,6 +72,14 @@ function runClient() {
   prolongDataTagCookies(eventModels[0]);
   const responseStatusCode = makeInteger(data.responseStatusCode || 200);
   setCommonResponseHeaders(responseStatusCode);
+  setBootstrapCookie(eventModels[0]);
+
+  if(eventModels[0].event_name === 'bootstrap)') {
+    setCommonResponseHeaders(204);
+    returnResponse();
+    data.gtmOnSuccess();
+    return;
+  }
 
   let counter = 0;
   eventModels.forEach((event) => {
@@ -381,6 +389,22 @@ function exposeFPIDCookie(eventModel) {
         httpOnly: false
       });
     }
+  }
+}
+
+function setBootstrapCookie(eventModel) {
+  // set a short-lived bootstrap cooikie for client-side coordination
+  // only set if it doesnt already exist
+  const existingBootstrap = getCookieValues('_bootstrap_cid');
+
+  if (!existingBootstrap || !existingBootstrap.length) {
+    setCookie('_bootstrap_cid', eventModel.client_id, {
+      domain: 'auto',
+      path: '/',
+      samesite: getCookieType(eventModel),
+      secure: true,
+      httpOnly: false // since the client will need to read it
+    });
   }
 }
 
