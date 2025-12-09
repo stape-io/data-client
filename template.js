@@ -59,6 +59,14 @@ function runClient() {
   }
   const baseEventModel = getBaseEventModelWithQueryParameters();
   let eventModels = getEventModels(baseEventModel);
+
+  const existingDcid = getCookieValues('_dcid');
+  if (eventModels[0] && eventModels[0].event_name === 'bootstrap' && existingDcid && existingDcid.length) {
+    setResponseHeaders(204);
+    returnResponse();
+    return;
+  }
+  
   const clientId = getClientId(eventModels);
   eventModels = eventModels.map((eventModel) => {
     eventModel = addRequiredParametersToEventModel(eventModel);
@@ -394,10 +402,11 @@ function exposeFPIDCookie(eventModel) {
 
 function setBootstrapCookie(eventModel) {
   // set a short-lived bootstrap cooikie for client-side coordination
-  // only set if it doesnt already exist
+  // Only set for brand new users who dont have a _dcid cookie yet
+  const existingDcid = getCookieValues('_dcid');
   const existingBootstrap = getCookieValues('_bootstrap_cid');
 
-  if (!existingBootstrap || !existingBootstrap.length) {
+  if (!existingDcid || !existingDcid.length) && (!existingBootstrap || !existingBootstrap.length) {
     setCookie('_bootstrap_cid', eventModel.client_id, {
       domain: 'auto',
       path: '/',
