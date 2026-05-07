@@ -11,3 +11,6 @@ Data Client developed for receiving requests from [Data Tag](https://github.com/
 ## Open Source
 
 Data Client for Google Tag Manager Server Side is developed and maintained by [Stape Team](https://stape.io/) under the Apache 2.0 license.
+
+### GTM Gallery Status
+🔴 Not listed
