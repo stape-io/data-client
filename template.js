@@ -1,29 +1,29 @@
-const returnResponse = require('returnResponse');
-const runContainer = require('runContainer');
-const setResponseHeader = require('setResponseHeader');
-const setResponseStatus = require('setResponseStatus');
-const setResponseBody = require('setResponseBody');
-const JSON = require('JSON');
-const fromBase64 = require('fromBase64');
-const getTimestampMillis = require('getTimestampMillis');
-const getCookieValues = require('getCookieValues');
-const getRequestBody = require('getRequestBody');
-const getRequestMethod = require('getRequestMethod');
-const getRequestHeader = require('getRequestHeader');
-const getRequestPath = require('getRequestPath');
-const getRequestQueryParameters = require('getRequestQueryParameters');
-const makeInteger = require('makeInteger');
-const getRemoteAddress = require('getRemoteAddress');
-const setCookie = require('setCookie');
-const setPixelResponse = require('setPixelResponse');
-const generateRandom = require('generateRandom');
 const computeEffectiveTldPlusOne = require('computeEffectiveTldPlusOne');
-const getRequestQueryParameter = require('getRequestQueryParameter');
-const getType = require('getType');
-const decodeUriComponent = require('decodeUriComponent');
 const createRegex = require('createRegex');
+const decodeUriComponent = require('decodeUriComponent');
+const fromBase64 = require('fromBase64');
+const generateRandom = require('generateRandom');
+const getCookieValues = require('getCookieValues');
+const getRemoteAddress = require('getRemoteAddress');
+const getRequestBody = require('getRequestBody');
+const getRequestHeader = require('getRequestHeader');
+const getRequestMethod = require('getRequestMethod');
+const getRequestPath = require('getRequestPath');
+const getRequestQueryParameter = require('getRequestQueryParameter');
+const getRequestQueryParameters = require('getRequestQueryParameters');
+const getTimestampMillis = require('getTimestampMillis');
+const getType = require('getType');
+const JSON = require('JSON');
+const makeInteger = require('makeInteger');
 const makeString = require('makeString');
 const Object = require('Object');
+const returnResponse = require('returnResponse');
+const runContainer = require('runContainer');
+const setCookie = require('setCookie');
+const setPixelResponse = require('setPixelResponse');
+const setResponseBody = require('setResponseBody');
+const setResponseHeader = require('setResponseHeader');
+const setResponseStatus = require('setResponseStatus');
 
 /*==============================================================================
 ==============================================================================*/
@@ -69,9 +69,11 @@ function runClient() {
     return eventModel;
   });
 
-  storeClientId(eventModels[0]);
-  exposeFPIDCookie(eventModels[0]);
-  prolongDataTagCookies(eventModels[0]);
+  const consentDeclined = isConsentDeclined(data, eventModels[0]); // TO DO
+  storeClientId(eventModels[0], consentDeclined);
+  exposeFPIDCookie(eventModels[0], consentDeclined);
+  prolongDataTagCookies(eventModels[0], consentDeclined);
+
   const responseStatusCode = makeInteger(data.responseStatusCode || 200);
   setCommonResponseHeaders(responseStatusCode);
 
@@ -293,20 +295,19 @@ function addClientIdToEventModel(eventModel, clientId) {
   return eventModel;
 }
 
-function prolongDataTagCookies(eventModel) {
-  if (data.prolongCookies) {
-    let stapeData = getCookieValues('stape');
+function prolongDataTagCookies(eventModel, consentDeclined) {
+  if (consentDeclined || !data.prolongCookies) return;
 
-    if (stapeData.length) {
-      setCookie('stape', stapeData[0], {
-        domain: 'auto',
-        path: '/',
-        samesite: getCookieType(eventModel),
-        secure: true,
-        'max-age': 63072000, // 2 years
-        httpOnly: false
-      });
-    }
+  const stapeData = getCookieValues('stape');
+  if (stapeData.length) {
+    setCookie('stape', stapeData[0], {
+      domain: 'auto',
+      path: '/',
+      samesite: getCookieType(eventModel),
+      secure: true,
+      'max-age': 63072000, // 2 years
+      httpOnly: false
+    });
   }
 }
 
@@ -324,34 +325,33 @@ function addRequiredParametersToEventModel(eventModel) {
   return eventModel;
 }
 
-function exposeFPIDCookie(eventModel) {
-  if (data.exposeFPIDCookie) {
-    let fpid = getCookieValues('FPID');
+function exposeFPIDCookie(eventModel, consentDeclined) {
+  if (consentDeclined || !data.exposeFPIDCookie) return;
 
-    if (fpid.length) {
-      setCookie('FPIDP', fpid[0], {
-        domain: 'auto',
-        path: '/',
-        samesite: getCookieType(eventModel),
-        secure: true,
-        'max-age': 63072000, // 2 years
-        httpOnly: false
-      });
-    }
-  }
-}
-
-function storeClientId(eventModel) {
-  if (data.generateClientId) {
-    setCookie('_dcid', eventModel.client_id, {
+  const fpid = getCookieValues('FPID');
+  if (fpid.length) {
+    setCookie('FPIDP', fpid[0], {
       domain: 'auto',
       path: '/',
       samesite: getCookieType(eventModel),
       secure: true,
       'max-age': 63072000, // 2 years
-      httpOnly: data.httpOnlyCookie || false
+      httpOnly: false
     });
   }
+}
+
+function storeClientId(eventModel, consentDeclined) {
+  if (consentDeclined || !data.generateClientId) return;
+
+  setCookie('_dcid', eventModel.client_id, {
+    domain: 'auto',
+    path: '/',
+    samesite: getCookieType(eventModel),
+    secure: true,
+    'max-age': 63072000, // 2 years
+    httpOnly: data.httpOnlyCookie || false
+  });
 }
 
 function setCommonResponseHeaders(statusCode) {
@@ -528,6 +528,21 @@ function getClientId(eventModels) {
   }
 
   return '';
+}
+
+function isConsentDeclined(data, eventData) {
+  const cookieStorageMode = data.cookieStorageMode;
+  if (!cookieStorageMode) return false;
+
+  if (cookieStorageMode === 'auto' && getType(eventData.consent_state) === 'object') {
+    // Check consent state from Stape's Data Tag
+    return eventData.consent_state[data.cookieConsentAutoParameter] === false;
+  } else if (cookieStorageMode === 'manual') {
+    // Check template field specific consent signal
+    return ['0', 0, 'false', false, 'denied'].indexOf(data.cookieConsentManualValue) !== -1;
+  }
+
+  return false;
 }
 
 /*==============================================================================
