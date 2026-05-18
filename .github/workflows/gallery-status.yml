@@ -2,7 +2,7 @@ name: Gallery Status
 
 on:
   schedule:
-    - cron: '0 4 * * MON,THU'
+    - cron: '0 4 * * SUN'
   push:
     branches:
       - main
