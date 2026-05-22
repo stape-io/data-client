@@ -1,29 +1,29 @@
-const returnResponse = require('returnResponse');
-const runContainer = require('runContainer');
-const setResponseHeader = require('setResponseHeader');
-const setResponseStatus = require('setResponseStatus');
-const setResponseBody = require('setResponseBody');
-const JSON = require('JSON');
-const fromBase64 = require('fromBase64');
-const getTimestampMillis = require('getTimestampMillis');
-const getCookieValues = require('getCookieValues');
-const getRequestBody = require('getRequestBody');
-const getRequestMethod = require('getRequestMethod');
-const getRequestHeader = require('getRequestHeader');
-const getRequestPath = require('getRequestPath');
-const getRequestQueryParameters = require('getRequestQueryParameters');
-const makeInteger = require('makeInteger');
-const getRemoteAddress = require('getRemoteAddress');
-const setCookie = require('setCookie');
-const setPixelResponse = require('setPixelResponse');
-const generateRandom = require('generateRandom');
 const computeEffectiveTldPlusOne = require('computeEffectiveTldPlusOne');
-const getRequestQueryParameter = require('getRequestQueryParameter');
-const getType = require('getType');
-const decodeUriComponent = require('decodeUriComponent');
 const createRegex = require('createRegex');
+const decodeUriComponent = require('decodeUriComponent');
+const fromBase64 = require('fromBase64');
+const generateRandom = require('generateRandom');
+const getCookieValues = require('getCookieValues');
+const getRemoteAddress = require('getRemoteAddress');
+const getRequestBody = require('getRequestBody');
+const getRequestHeader = require('getRequestHeader');
+const getRequestMethod = require('getRequestMethod');
+const getRequestPath = require('getRequestPath');
+const getRequestQueryParameter = require('getRequestQueryParameter');
+const getRequestQueryParameters = require('getRequestQueryParameters');
+const getTimestampMillis = require('getTimestampMillis');
+const getType = require('getType');
+const JSON = require('JSON');
+const makeInteger = require('makeInteger');
 const makeString = require('makeString');
 const Object = require('Object');
+const returnResponse = require('returnResponse');
+const runContainer = require('runContainer');
+const setCookie = require('setCookie');
+const setPixelResponse = require('setPixelResponse');
+const setResponseBody = require('setResponseBody');
+const setResponseHeader = require('setResponseHeader');
+const setResponseStatus = require('setResponseStatus');
 
 /*==============================================================================
 ==============================================================================*/
@@ -69,9 +69,11 @@ function runClient() {
     return eventModel;
   });
 
-  storeClientId(eventModels[0]);
-  exposeFPIDCookie(eventModels[0]);
-  prolongDataTagCookies(eventModels[0]);
+  const consentDeclined = isConsentDeclined(data, eventModels[0]);
+  storeClientId(eventModels[0], consentDeclined);
+  exposeFPIDCookie(eventModels[0], consentDeclined);
+  prolongDataTagCookies(eventModels[0], consentDeclined);
+
   const responseStatusCode = makeInteger(data.responseStatusCode || 200);
   setCommonResponseHeaders(responseStatusCode);
 
@@ -106,39 +108,35 @@ function runClient() {
 
 function addCommonParametersToEventModel(eventModel) {
   if (!eventModel.ip_override) {
-    if (eventModel.ip) eventModel.ip_override = eventModel.ip;
-    else if (eventModel.ipOverride) eventModel.ip_override = eventModel.ipOverride;
-    else eventModel.ip_override = getRemoteAddress();
+    const ipOverride = eventModel.ip || eventModel.ipOverride || getRemoteAddress();
+    eventModel.ip_override = ipOverride;
   }
 
   if (!eventModel.user_agent) {
-    if (eventModel.userAgent) eventModel.user_agent = eventModel.userAgent;
-    else if (getRequestHeader('User-Agent')) eventModel.user_agent = getRequestHeader('User-Agent');
+    const userAgent = eventModel.userAgent || getRequestHeader('User-Agent');
+    if (userAgent) eventModel.user_agent = userAgent;
   }
 
   if (!eventModel.language) {
     const acceptLanguageHeader = getRequestHeader('Accept-Language');
-
     if (acceptLanguageHeader) {
       eventModel.language = acceptLanguageHeader.split(';')[0].substring(0, 2).toLowerCase();
     }
   }
 
   if (!eventModel.page_hostname) {
-    if (eventModel.pageHostname) eventModel.page_hostname = eventModel.pageHostname;
-    else if (eventModel.hostname) eventModel.page_hostname = eventModel.hostname;
+    const pageHostname = eventModel.pageHostname || eventModel.hostname;
+    if (pageHostname) eventModel.page_hostname = pageHostname;
   }
 
   if (!eventModel.page_location) {
-    if (eventModel.pageLocation) eventModel.page_location = eventModel.pageLocation;
-    else if (eventModel.url) eventModel.page_location = eventModel.url;
-    else if (eventModel.href) eventModel.page_location = eventModel.href;
+    const pageLocation = eventModel.pageLocation || eventModel.url || eventModel.href;
+    if (pageLocation) eventModel.page_location = pageLocation;
   }
 
   if (!eventModel.page_referrer) {
-    if (eventModel.pageReferrer) eventModel.page_referrer = eventModel.pageReferrer;
-    else if (eventModel.referrer) eventModel.page_referrer = eventModel.referrer;
-    else if (eventModel.urlref) eventModel.page_referrer = eventModel.urlref;
+    const pageReferrer = eventModel.pageReferrer || eventModel.referrer || eventModel.urlref;
+    if (pageReferrer) eventModel.page_referrer = pageReferrer;
   }
 
   if (!eventModel.value && eventModel.e_v) eventModel.value = eventModel.e_v;
@@ -203,17 +201,18 @@ function addCommonParametersToEventModel(eventModel) {
     let userAddressData = {};
 
     if (!userData.email_address) {
-      if (eventModel.userEmail) userData.email_address = eventModel.userEmail;
-      else if (eventModel.email_address) userData.email_address = eventModel.email_address;
-      else if (eventModel.email) userData.email_address = eventModel.email;
-      else if (eventModel.mail) userData.email_address = eventModel.mail;
+      const emailAddress =
+        eventModel.userEmail || eventModel.email_address || eventModel.email || eventModel.mail;
+      if (emailAddress) userData.email_address = emailAddress;
     }
 
     if (!userData.phone_number) {
-      if (eventModel.userPhoneNumber) userData.phone_number = eventModel.userPhoneNumber;
-      else if (eventModel.phone_number) userData.phone_number = eventModel.phone_number;
-      else if (eventModel.phoneNumber) userData.phone_number = eventModel.phoneNumber;
-      else if (eventModel.phone) userData.phone_number = eventModel.phone;
+      const phoneNumber =
+        eventModel.userPhoneNumber ||
+        eventModel.phone_number ||
+        eventModel.phoneNumber ||
+        eventModel.phone;
+      if (phoneNumber) userData.phone_number = phoneNumber;
     }
 
     if (!userAddressData.street && eventModel.street) userAddressData.street = eventModel.street;
@@ -223,19 +222,23 @@ function addCommonParametersToEventModel(eventModel) {
       userAddressData.country = eventModel.country;
 
     if (!userAddressData.first_name) {
-      if (eventModel.userFirstName) userAddressData.first_name = eventModel.userFirstName;
-      else if (eventModel.first_name) userAddressData.first_name = eventModel.first_name;
-      else if (eventModel.firstName) userAddressData.first_name = eventModel.firstName;
-      else if (eventModel.name) userAddressData.first_name = eventModel.name;
+      const firstName =
+        eventModel.userFirstName ||
+        eventModel.first_name ||
+        eventModel.firstName ||
+        eventModel.name;
+      if (firstName) userAddressData.first_name = firstName;
     }
 
     if (!userAddressData.last_name) {
-      if (eventModel.userLastName) userAddressData.last_name = eventModel.userLastName;
-      else if (eventModel.last_name) userAddressData.last_name = eventModel.last_name;
-      else if (eventModel.lastName) userAddressData.last_name = eventModel.lastName;
-      else if (eventModel.surname) userAddressData.last_name = eventModel.surname;
-      else if (eventModel.family_name) userAddressData.last_name = eventModel.family_name;
-      else if (eventModel.familyName) userAddressData.last_name = eventModel.familyName;
+      const lastName =
+        eventModel.userLastName ||
+        eventModel.last_name ||
+        eventModel.lastName ||
+        eventModel.surname ||
+        eventModel.family_name ||
+        eventModel.familyName;
+      if (lastName) userAddressData.last_name = lastName;
     }
 
     if (!userAddressData.region) {
@@ -244,9 +247,8 @@ function addCommonParametersToEventModel(eventModel) {
     }
 
     if (!userAddressData.postal_code) {
-      if (eventModel.postal_code) userAddressData.postal_code = eventModel.postal_code;
-      else if (eventModel.postalCode) userAddressData.postal_code = eventModel.postalCode;
-      else if (eventModel.zip) userAddressData.postal_code = eventModel.zip;
+      const postalCode = eventModel.postal_code || eventModel.postalCode || eventModel.zip;
+      if (postalCode) userAddressData.postal_code = postalCode;
     }
 
     if (getObjectLength(userAddressData) !== 0) {
@@ -293,65 +295,58 @@ function addClientIdToEventModel(eventModel, clientId) {
   return eventModel;
 }
 
-function prolongDataTagCookies(eventModel) {
-  if (data.prolongCookies) {
-    let stapeData = getCookieValues('stape');
+function prolongDataTagCookies(eventModel, consentDeclined) {
+  if (consentDeclined || !data.prolongCookies) return;
 
-    if (stapeData.length) {
-      setCookie('stape', stapeData[0], {
-        domain: 'auto',
-        path: '/',
-        samesite: getCookieType(eventModel),
-        secure: true,
-        'max-age': 63072000, // 2 years
-        httpOnly: false
-      });
-    }
+  const stapeData = getCookieValues('stape');
+  if (stapeData.length) {
+    setCookie('stape', stapeData[0], {
+      domain: 'auto',
+      path: '/',
+      samesite: getCookieType(eventModel),
+      secure: true,
+      'max-age': 63072000, // 2 years
+      httpOnly: false
+    });
   }
 }
 
 function addRequiredParametersToEventModel(eventModel) {
   if (!eventModel.event_name) {
-    let eventName = 'Data';
-
-    if (eventModel.eventName) eventName = eventModel.eventName;
-    else if (eventModel.event) eventName = eventModel.event;
-    else if (eventModel.e_n) eventName = eventModel.e_n;
-
+    const eventName = eventModel.eventName || eventModel.event || eventModel.e_n || 'Data';
     eventModel.event_name = eventName;
   }
 
   return eventModel;
 }
 
-function exposeFPIDCookie(eventModel) {
-  if (data.exposeFPIDCookie) {
-    let fpid = getCookieValues('FPID');
+function exposeFPIDCookie(eventModel, consentDeclined) {
+  if (consentDeclined || !data.exposeFPIDCookie) return;
 
-    if (fpid.length) {
-      setCookie('FPIDP', fpid[0], {
-        domain: 'auto',
-        path: '/',
-        samesite: getCookieType(eventModel),
-        secure: true,
-        'max-age': 63072000, // 2 years
-        httpOnly: false
-      });
-    }
-  }
-}
-
-function storeClientId(eventModel) {
-  if (data.generateClientId) {
-    setCookie('_dcid', eventModel.client_id, {
+  const fpid = getCookieValues('FPID');
+  if (fpid.length) {
+    setCookie('FPIDP', fpid[0], {
       domain: 'auto',
       path: '/',
       samesite: getCookieType(eventModel),
       secure: true,
       'max-age': 63072000, // 2 years
-      httpOnly: data.httpOnlyCookie || false
+      httpOnly: false
     });
   }
+}
+
+function storeClientId(eventModel, consentDeclined) {
+  if (consentDeclined || !data.generateClientId) return;
+
+  setCookie('_dcid', eventModel.client_id, {
+    domain: 'auto',
+    path: '/',
+    samesite: getCookieType(eventModel),
+    secure: true,
+    'max-age': 63072000, // 2 years
+    httpOnly: data.httpOnlyCookie || false
+  });
 }
 
 function setCommonResponseHeaders(statusCode) {
@@ -528,6 +523,21 @@ function getClientId(eventModels) {
   }
 
   return '';
+}
+
+function isConsentDeclined(data, eventData) {
+  const cookieStorageMode = data.cookieStorageMode;
+  if (!cookieStorageMode) return false;
+
+  if (cookieStorageMode === 'auto' && getType(eventData.consent_state) === 'object') {
+    // Check consent state from Stape's Data Tag
+    return eventData.consent_state[data.cookieConsentAutoParameter] === false;
+  } else if (cookieStorageMode === 'manual') {
+    // Check template field specific consent signal
+    return ['0', 0, 'false', false, 'denied'].indexOf(data.cookieConsentManualValue) !== -1;
+  }
+
+  return false;
 }
 
 /*==============================================================================
