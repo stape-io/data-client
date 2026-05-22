@@ -1,6 +1,8 @@
 homepage: 'https://stape.io/'
 documentation: 'https://github.com/stape-io/data-client'
 versions:
+  - sha: ac396468e0856102dad9cee8beb0310e497d58d1
+    changeNotes: Added cookie consent gating for setting cookies.
   - sha: 635db943dcfc19e9e8da9ca6058dea3d8ef38f62
     changeNotes: Code organization and formatting only.
   - sha: 7c813f3d19305a5b54e8c122e4c42728b10fbccf
