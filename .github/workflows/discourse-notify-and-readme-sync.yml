@@ -24,7 +24,7 @@ jobs:
     uses: stape-io/template-changes-shared-workflows/.github/workflows/discourse-notify.yml@main
     permissions:
       contents: read
-      models: read
+      copilot-requests: write
     with:
       before_sha: ${{ github.event.before }}
       head_sha: ${{ github.sha }}
