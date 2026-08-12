@@ -1,6 +1,8 @@
 homepage: 'https://stape.io/'
 documentation: 'https://github.com/stape-io/data-client'
 versions:
+  - sha: d0eaccc5f2b52c25ed3712daf4176509dc9e95de
+    changeNotes: Improved "Generate Client ID" help text.
   - sha: ac396468e0856102dad9cee8beb0310e497d58d1
     changeNotes: Added cookie consent gating for setting cookies.
   - sha: 635db943dcfc19e9e8da9ca6058dea3d8ef38f62

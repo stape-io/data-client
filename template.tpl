@@ -41,7 +41,7 @@ ___TEMPLATE_PARAMETERS___
     "name": "generateClientId",
     "checkboxText": "Generate the \"client_id\" parameter and store it as the \"_dcid\" cookie",
     "simpleValueType": true,
-    "help": "If enabled, even if the \u003ci\u003eclient_id\u003c/i\u003e parameter is not determined from the request, it will still be generated and stored in the \u003ci\u003e_dcid\u003c/i\u003e cookie.\n\u003cbr/\u003e\nThe \u003ci\u003eclient_id\u003c/i\u003e parameter is required by GA4 tags.\n\u003cbr/\u003e\u003cbr/\u003e\nThe cookie won\u0027t be stored if the \u003ci\u003eCookie Storage Mode\u003c/i\u003e under the \u003ci\u003eCookie Consent Settings\u003c/i\u003e section receives \u003ci\u003edenied\u003c/i\u003e.",
+    "help": "If enabled, a \u003ci\u003eclient_id\u003c/i\u003e will be generated when the request doesn\u0027t already include one, and stored in the \u003ci\u003e_dcid\u003c/i\u003e cookie. The \u003ci\u003eclient_id\u003c/i\u003e can come from the event parameters, the \u003ci\u003e_dcid\u003c/i\u003e cookie, a temporary client ID (from Data Tag), or a newly generated random value, checked in that order.\n\u003cbr/\u003e\nThe \u003ci\u003eclient_id\u003c/i\u003e parameter is required by GA4 tags.\n\u003cbr/\u003e\u003cbr/\u003e\nThe cookie won\u0027t be stored if the \u003ci\u003eCookie Storage Mode\u003c/i\u003e under the \u003ci\u003eCookie Consent Settings\u003c/i\u003e section receives \u003ci\u003edenied\u003c/i\u003e.",
     "defaultValue": true,
     "subParams": [
       {
@@ -1495,6 +1495,9 @@ setup: |-
 
 
 ___NOTES___
+
+2026-08-12 - Change Notes:
+  - Improve "Generate Client ID" field help text.
 
 2026-05-22 - Change Notes:
   - Add cookie consent gating: new "Cookie Consent Settings" parameter group lets users skip all setCookie calls when consent is denied, using either auto-detection (via Data Tag's consent_state) or a manual GTM variable
