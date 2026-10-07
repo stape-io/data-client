@@ -2,6 +2,8 @@
 
 Data Client developed for receiving requests from [Data Tag](https://github.com/stape-io/data-tag) placed inside the Google Tag Manager Web Container, but it can also receive any request and map it to the Event Data inside the Google Tag Manager Server Side container.
 
+For the full reference on constructing valid HTTP requests to the Data Client (endpoints, request format, parameters), see the [Data Client Protocol](./data-client-protocol.md).
+
 ## Useful resources
 
 - https://stape.io/solutions/data-tag-client
