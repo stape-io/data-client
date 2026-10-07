@@ -1,6 +1,8 @@
 homepage: 'https://stape.io/'
 documentation: 'https://github.com/stape-io/data-client'
 versions:
+  - sha: 9c89172f789e60221bb9f7d99821f487c307e767
+    changeNotes: Added option to return the response before container logic runs.
   - sha: d0eaccc5f2b52c25ed3712daf4176509dc9e95de
     changeNotes: Improved "Generate Client ID" help text.
   - sha: ac396468e0856102dad9cee8beb0310e497d58d1
