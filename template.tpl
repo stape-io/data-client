@@ -84,6 +84,14 @@ ___TEMPLATE_PARAMETERS___
     "groupStyle": "ZIPPY_CLOSED",
     "subParams": [
       {
+        "type": "CHECKBOX",
+        "name": "returnResponseEarly",
+        "checkboxText": "Return the response early before the container logic runs",
+        "simpleValueType": true,
+        "defaultValue": false,
+        "help": "Returns the configured response before the container logic (variables, triggers, tags) runs in the scope of an event.\n\u003cbr/\u003e\nIt\u0027s useful for cases where the response data (cookies set, headers etc.) won\u0027t be used and the receiver must only acknowledge the response, reducing the latency.\n\u003cbr/\u003e\nCookies, headers and status/body changes made by tags are discarded, and sendPixelFromBrowser won\u0027t work, because the response has already been sent."
+      },
+      {
         "type": "SELECT",
         "name": "responseStatusCode",
         "displayName": "Response Status Code",
@@ -442,33 +450,43 @@ function runClient() {
   const responseStatusCode = makeInteger(data.responseStatusCode || 200);
   setCommonResponseHeaders(responseStatusCode);
 
+  let responseAlreadySent = false;
+  if (data.returnResponseEarly) {
+    finalizeResponse(data, responseStatusCode, requestMethod, eventModels);
+    responseAlreadySent = true;
+  }
+
   let counter = 0;
   eventModels.forEach((event) => {
     runContainer(event, () => {
-      if (++counter === eventModels.length) {
-        switch (responseStatusCode) {
-          case 200:
-          case 201:
-            if (requestMethod === 'POST' || data.responseBodyGet) {
-              prepareResponseBody(eventModels);
-            } else {
-              setPixelResponse();
-            }
-            break;
-          case 301:
-          case 302:
-            setRedirectLocation();
-            break;
-          case 403:
-          case 404:
-            setClientErrorResponseMessage();
-            break;
-        }
-
-        returnResponse();
+      if (++counter === eventModels.length && !responseAlreadySent) {
+        finalizeResponse(data, responseStatusCode, requestMethod, eventModels);
       }
     });
   });
+}
+
+function finalizeResponse(data, responseStatusCode, requestMethod, eventModels) {
+  switch (responseStatusCode) {
+    case 200:
+    case 201:
+      if (requestMethod === 'POST' || data.responseBodyGet) {
+        prepareResponseBody(eventModels);
+      } else {
+        setPixelResponse();
+      }
+      break;
+    case 301:
+    case 302:
+      setRedirectLocation();
+      break;
+    case 403:
+    case 404:
+      setClientErrorResponseMessage();
+      break;
+  }
+
+  returnResponse();
 }
 
 function addCommonParametersToEventModel(eventModel) {
@@ -1462,6 +1480,61 @@ scenarios:
         assertApi('returnResponse').wasCalled();
       });
     });
+- name: Returns the response early, before runContainer/tags execute, when
+    Return Response Early is enabled
+  code: "mockData.returnResponseEarly = true;\n\nmock('getRequestPath', '/data')\
+    ;\nmock('getRequestMethod', 'POST');\nmock('getRequestBody', '{\"event\":\"p\
+    age_view\",\"client_id\":\"client_id\"}');\n\nconst executionOrder = [];\n\n\
+    /* \n  For some reason when we use \"assertApi('claimRequest').wasCalled()\"\
+     AND we run all the tests,\n  it produces the following error \"Tried to cla\
+    im a request after a Client had returned. Calling claimRequest from a callba\
+    ck is not supported.\"\n  If we run only this single test, the error does no\
+    t occur.\n  A workaround is to mock 'claimRequest' API and make a dummy asse\
+    rtion in the mocked function. This way we make sure it's been called.\n*/\nl\
+    et claimRequestWasCalled;\nmock('claimRequest', () => {\n  claimRequestWasCa\
+    lled = true;\n});\n\nlet returnResponseExecutions = 0;\nconst returnResponse\
+    ExpectedExecutions = 1;\nmock('runContainer', (eventData, onCompleteCallback\
+    , onStartCallback) => {\n  executionOrder.push('runContainer');\n  assertTha\
+    t(eventData).isObject();\n  assertThat(onCompleteCallback).isFunction();\n  \
+    onCompleteCallback();\n});\n\nmock('returnResponse', () => {\n  returnRespon\
+    seExecutions++;\n  if (returnResponseExecutions > returnResponseExpectedExec\
+    utions) {\n    fail('returnResponse should only be called once when Return R\
+    esponse Early is enabled.');\n    return;\n  }\n  executionOrder.push('retur\
+    nResponse');\n});\n\nrunCode(mockData);\n\ncallLater(() => {\n  assertThat(c\
+    laimRequestWasCalled).isTrue();\n  assertApi('setResponseStatus').wasCalledW\
+    ith(200);\n  assertThat(returnResponseExecutions).isEqualTo(returnResponseEx\
+    pectedExecutions);\n  assertThat(executionOrder[0]).isEqualTo('returnRespons\
+    e');\n  assertThat(executionOrder[1]).isEqualTo('runContainer');\n});"
+- name: Returns the response early only once for multiple events when Return
+    Response Early is enabled
+  code: "mockData.returnResponseEarly = true;\nmockData.acceptMultipleEvents = t\
+    rue;\n\nmock('getRequestPath', '/data');\nmock('getRequestMethod', 'POST');\
+    \nmock('getRequestBody', '[{\"event\":\"page_view\",\"client_id\":\"client_i\
+    d\"},{\"event\":\"view_item\",\"client_id\":\"client_id\"}]');\n\nconst exec\
+    utionOrder = [];\n\n/* \n  For some reason when we use \"assertApi('claimReq\
+    uest').wasCalled()\" AND we run all the tests,\n  it produces the following \
+    error \"Tried to claim a request after a Client had returned. Calling claimR\
+    equest from a callback is not supported.\"\n  If we run only this single tes\
+    t, the error does not occur.\n  A workaround is to mock 'claimRequest' API a\
+    nd make a dummy assertion in the mocked function. This way we make sure it's\
+     been called.\n*/\nlet claimRequestWasCalled;\nmock('claimRequest', () => {\
+    \n  claimRequestWasCalled = true;\n});\n\nlet runContainerExecutions = 0;\nc\
+    onst runContainerExpectedExecutions = 2;\nmock('runContainer', (eventData, o\
+    nCompleteCallback, onStartCallback) => {\n  executionOrder.push('runContaine\
+    r');\n  runContainerExecutions++;\n  assertThat(eventData).isObject();\n  as\
+    sertThat(onCompleteCallback).isFunction();\n  onCompleteCallback();\n});\n\n\
+    let returnResponseExecutions = 0;\nconst returnResponseExpectedExecutions = \
+    1;\nmock('returnResponse', () => {\n  returnResponseExecutions++;\n  if (ret\
+    urnResponseExecutions > returnResponseExpectedExecutions) {\n    fail('retur\
+    nResponse should only be called once when Return Response Early is enabled, \
+    even with multiple events.');\n    return;\n  }\n  executionOrder.push('retu\
+    rnResponse');\n});\n\nrunCode(mockData);\n\ncallLater(() => {\n  assertThat(\
+    claimRequestWasCalled).isTrue();\n  assertApi('setResponseStatus').wasCalled\
+    With(200);\n  assertThat(runContainerExecutions).isEqualTo(runContainerExpec\
+    tedExecutions);\n  assertThat(returnResponseExecutions).isEqualTo(returnResp\
+    onseExpectedExecutions);\n  assertThat(executionOrder[0]).isEqualTo('returnR\
+    esponse');\n  assertThat(executionOrder[1]).isEqualTo('runContainer');\n  as\
+    sertThat(executionOrder[2]).isEqualTo('runContainer');\n});"
 setup: |-
   const JSON = require('JSON');
   const Object = require('Object');
@@ -1496,6 +1569,9 @@ setup: |-
 
 ___NOTES___
 
+2026-09-24 - Change Notes:
+  - Add "Return the response early before the container logic runs" checkbox (off by default), letting the response be sent as soon as the request is claimed instead of waiting for all tags/triggers to finish, reducing latency for receivers that only need an acknowledgement
+
 2026-08-12 - Change Notes:
   - Improve "Generate Client ID" field help text.
 
@@ -1505,3 +1581,4 @@ ___NOTES___
   - Fix broken test mock: mock('requestMethod') corrected to mock('getRequestMethod') across existing test scenarios
 
 Created on 21/03/2021, 11:24:30
+

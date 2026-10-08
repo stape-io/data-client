@@ -77,33 +77,43 @@ function runClient() {
   const responseStatusCode = makeInteger(data.responseStatusCode || 200);
   setCommonResponseHeaders(responseStatusCode);
 
+  let responseAlreadySent = false;
+  if (data.returnResponseEarly) {
+    finalizeResponse(data, responseStatusCode, requestMethod, eventModels);
+    responseAlreadySent = true;
+  }
+
   let counter = 0;
   eventModels.forEach((event) => {
     runContainer(event, () => {
-      if (++counter === eventModels.length) {
-        switch (responseStatusCode) {
-          case 200:
-          case 201:
-            if (requestMethod === 'POST' || data.responseBodyGet) {
-              prepareResponseBody(eventModels);
-            } else {
-              setPixelResponse();
-            }
-            break;
-          case 301:
-          case 302:
-            setRedirectLocation();
-            break;
-          case 403:
-          case 404:
-            setClientErrorResponseMessage();
-            break;
-        }
-
-        returnResponse();
+      if (++counter === eventModels.length && !responseAlreadySent) {
+        finalizeResponse(data, responseStatusCode, requestMethod, eventModels);
       }
     });
   });
+}
+
+function finalizeResponse(data, responseStatusCode, requestMethod, eventModels) {
+  switch (responseStatusCode) {
+    case 200:
+    case 201:
+      if (requestMethod === 'POST' || data.responseBodyGet) {
+        prepareResponseBody(eventModels);
+      } else {
+        setPixelResponse();
+      }
+      break;
+    case 301:
+    case 302:
+      setRedirectLocation();
+      break;
+    case 403:
+    case 404:
+      setClientErrorResponseMessage();
+      break;
+  }
+
+  returnResponse();
 }
 
 function addCommonParametersToEventModel(eventModel) {
